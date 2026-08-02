@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">¿Unas Rolitas?</string>
+    <string name="songs">Canciones</string>
+    <string name="playlists">Listas de reproducción</string>
+    <string name="folders">Carpetas</string>
+    <string name="albums">Álbumes</string>
+    <string name="artists">Artistas</string>
+    <string name="genres">Géneros</string>
+    <string name="favorites">Favoritos</string>
+    <string name="most_played">Más reproducidas</string>
+    <string name="recently_added">Recientemente añadidas</string>
+    <string name="history">Historial</string>
+    <string name="downloads">Descargadas</string>
+    <string name="podcasts">Podcasts</string>
+    <string name="audiobooks">Audiolibros</string>
+</resources>
