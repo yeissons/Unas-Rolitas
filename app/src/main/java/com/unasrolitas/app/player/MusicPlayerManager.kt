@@ -57,9 +57,10 @@ class MusicPlayerManager private constructor(private val context: Context) {
     private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
     val repeatMode: StateFlow<Int> = _repeatMode.asStateFlow()
 
-    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+    private val coroutineScope = CoroutineScope(Dispatchers.Main.immediate)
     private var progressJob: Job? = null
     private var sleepTimerJob: Job? = null
+    private var playbackServiceStarted = false
 
     init {
         try {
@@ -100,13 +101,18 @@ class MusicPlayerManager private constructor(private val context: Context) {
     }
 
     private fun startPlaybackService() {
+        if (playbackServiceStarted) return
+
         try {
             val intent = Intent(context, PlaybackService::class.java)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
                 context.startService(intent)
             }
+
+            playbackServiceStarted = true
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -259,6 +265,7 @@ class MusicPlayerManager private constructor(private val context: Context) {
         stopProgressTracker()
         sleepTimerJob?.cancel()
         sleepTimerJob = null
+        playbackServiceStarted = false
         dspManager.release()
         mediaSession?.release()
         mediaSession = null

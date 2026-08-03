@@ -93,7 +93,7 @@ fun PermissionHandler(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "«¿Unas Rolitas?» necesita acceso a tus archivos de música para escanear y reproducir tus canciones almacenadas localmente.",
+                    text = "«¿Unas Rolitas?» necesita permiso para acceder a tu música y reproducir las canciones almacenadas en tu dispositivo.",
                     fontSize = 14.sp,
                     color = TextSecondary,
                     lineHeight = 20.sp,
@@ -106,7 +106,7 @@ fun PermissionHandler(
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Conceder Permiso de Almacenamiento", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Conceder Acceso a la Música", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }

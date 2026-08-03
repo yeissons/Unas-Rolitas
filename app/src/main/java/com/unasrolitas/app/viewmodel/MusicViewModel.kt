@@ -73,7 +73,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     init {
-        loadLibrary()
         applyAudioSettingsToDsp(_audioSettings.value)
 
         viewModelScope.launch {
@@ -160,10 +159,15 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             artworkUri = null,
             mimeType = "audio/*",
             sizeBytes = 0,
-            filePath = uri.path ?: "",
+            filePath = "",
             isFavorite = false
         )
-        playerManager.setQueue(listOf(externalSong), 0, autoPlay = true)
+
+        playerManager.setQueue(
+            songs = listOf(externalSong),
+            startPosition = 0,
+            autoPlay = true
+        )
     }
 
     fun playQueueIndex(index: Int) {
