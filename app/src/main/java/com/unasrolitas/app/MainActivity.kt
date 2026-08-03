@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
     private var musicViewModel: MusicViewModel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate()
+        super.onCreate(savedInstanceState)
         val incomingUri = intent?.data
 
         setContent {

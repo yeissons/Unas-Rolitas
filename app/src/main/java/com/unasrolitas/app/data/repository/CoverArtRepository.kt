@@ -29,7 +29,7 @@ class CoverArtRepository(private val context: Context) {
             retriever.setDataSource(context, song.uri)
             val embeddedBytes = retriever.embeddedPicture
             retriever.release()
-            if (!embeddedBytes.isNullOrEmpty()) {
+            if (embeddedBytes != null && embeddedBytes.isNotEmpty()) {
                 FileOutputStream(cachedFile).use { it.write(embeddedBytes) }
                 return@withContext Uri.fromFile(cachedFile)
             }
