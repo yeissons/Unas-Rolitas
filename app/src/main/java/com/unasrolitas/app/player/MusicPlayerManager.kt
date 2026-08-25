@@ -13,6 +13,7 @@ import androidx.media3.session.MediaSession
 import com.unasrolitas.app.audio.AudioDspManager
 import com.unasrolitas.app.data.model.Song
 import com.unasrolitas.app.service.PlaybackService
+import com.unasrolitas.app.util.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 @OptIn(UnstableApi::class)
 class MusicPlayerManager private constructor(private val context: Context) {
@@ -57,7 +60,7 @@ class MusicPlayerManager private constructor(private val context: Context) {
     private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
     val repeatMode: StateFlow<Int> = _repeatMode.asStateFlow()
 
-    private val coroutineScope = CoroutineScope(Dispatchers.Main.immediate)
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var progressJob: Job? = null
     private var sleepTimerJob: Job? = null
     private var playbackServiceStarted = false
@@ -67,17 +70,38 @@ class MusicPlayerManager private constructor(private val context: Context) {
             mediaSession = MediaSession.Builder(context, _exoPlayer)
                 .setId("UnasRolitasMediaSession")
                 .build()
+
+            AppLogger.i("PLAYER", "MediaSession creada")
         } catch (e: Exception) {
-            e.printStackTrace()
+            AppLogger.e("PLAYER", "No se pudo crear MediaSession", e)
         }
 
         _exoPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
+
+                AppLogger.i(
+                    "PLAYER",
+                    "isPlaying=$isPlaying audioSessionId=${_exoPlayer.audioSessionId}"
+                )
+
                 if (isPlaying) {
                     startProgressTracker()
                     startPlaybackService()
-                    dspManager.attachToAudioSession(_exoPlayer.audioSessionId)
+
+                    val audioSessionId = _exoPlayer.audioSessionId
+                    if (audioSessionId > 0) {
+                        AppLogger.i(
+                            "PLAYER",
+                            "AudioSession disponible: $audioSessionId"
+                        )
+                        dspManager.attachToAudioSession(audioSessionId)
+                    } else {
+                        AppLogger.w(
+                            "PLAYER",
+                            "ExoPlayer comenzó a reproducir sin AudioSession válida: $audioSessionId"
+                        )
+                    }
                 } else {
                     stopProgressTracker()
                 }
@@ -85,6 +109,12 @@ class MusicPlayerManager private constructor(private val context: Context) {
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 val index = _exoPlayer.currentMediaItemIndex
+
+                AppLogger.i(
+                    "PLAYER",
+                    "Transicion mediaItem index=$index reason=$reason"
+                )
+
                 if (index in _playlist.value.indices) {
                     _currentIndex.value = index
                     _currentSong.value = _playlist.value[index]
@@ -93,8 +123,23 @@ class MusicPlayerManager private constructor(private val context: Context) {
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
+                AppLogger.i(
+                    "PLAYER",
+                    "playbackState=$playbackState audioSessionId=${_exoPlayer.audioSessionId}"
+                )
+
                 if (playbackState == Player.STATE_READY) {
-                    _durationMs.value = if (_exoPlayer.duration > 0) _exoPlayer.duration else (_currentSong.value?.durationMs ?: 0L)
+                    _durationMs.value =
+                        if (_exoPlayer.duration > 0) {
+                            _exoPlayer.duration
+                        } else {
+                            _currentSong.value?.durationMs ?: 0L
+                        }
+
+                    val audioSessionId = _exoPlayer.audioSessionId
+                    if (audioSessionId > 0) {
+                        dspManager.attachToAudioSession(audioSessionId)
+                    }
                 }
             }
         })
@@ -114,7 +159,11 @@ class MusicPlayerManager private constructor(private val context: Context) {
 
             playbackServiceStarted = true
         } catch (e: Exception) {
-            e.printStackTrace()
+            AppLogger.e(
+                "SERVICE",
+                "No se pudo iniciar PlaybackService",
+                e
+            )
         }
     }
 
@@ -151,6 +200,11 @@ class MusicPlayerManager private constructor(private val context: Context) {
                 .setMediaMetadata(metadata)
                 .build()
         }
+        AppLogger.i(
+            "PLAYER",
+            "setQueue size=${songs.size} start=$startPosition autoPlay=$autoPlay"
+        )
+
         _exoPlayer.setMediaItems(mediaItems, startPosition, 0L)
         _exoPlayer.prepare()
         _exoPlayer.playWhenReady = autoPlay
@@ -203,8 +257,15 @@ class MusicPlayerManager private constructor(private val context: Context) {
         _exoPlayer.addMediaItem(mediaItem)
     }
 
-    fun play() = _exoPlayer.play()
-    fun pause() = _exoPlayer.pause()
+    fun play() {
+        AppLogger.i("PLAYER", "play()")
+        _exoPlayer.play()
+    }
+
+    fun pause() {
+        AppLogger.i("PLAYER", "pause()")
+        _exoPlayer.pause()
+    }
     fun togglePlay() {
         if (_exoPlayer.isPlaying) pause() else play()
     }
@@ -262,14 +323,31 @@ class MusicPlayerManager private constructor(private val context: Context) {
     }
 
     fun release() {
+        AppLogger.i("PLAYER", "release() iniciado")
+
         stopProgressTracker()
+
         sleepTimerJob?.cancel()
         sleepTimerJob = null
+
         playbackServiceStarted = false
+
         dspManager.release()
+
         mediaSession?.release()
         mediaSession = null
+
+        coroutineScope.cancel()
+
         _exoPlayer.release()
+
+        synchronized(MusicPlayerManager::class.java) {
+            if (INSTANCE === this) {
+                INSTANCE = null
+            }
+        }
+
+        AppLogger.i("PLAYER", "release() terminado")
     }
 
     companion object {
@@ -278,7 +356,10 @@ class MusicPlayerManager private constructor(private val context: Context) {
 
         fun getInstance(context: Context): MusicPlayerManager {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: MusicPlayerManager(context.applicationContext).also { INSTANCE = it }
+                INSTANCE ?: MusicPlayerManager(context.applicationContext).also {
+                    INSTANCE = it
+                    AppLogger.i("PLAYER", "MusicPlayerManager creado")
+                }
             }
         }
     }
