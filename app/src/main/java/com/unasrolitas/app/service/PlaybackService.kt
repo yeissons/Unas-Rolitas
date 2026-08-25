@@ -3,6 +3,7 @@ package com.unasrolitas.app.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
@@ -30,24 +31,47 @@ class PlaybackService : MediaSessionService() {
 
         createNotificationChannel()
 
+        /*
+         * IMPORTANTE:
+         * El servicio fue iniciado mediante startForegroundService().
+         * Android exige que pase a foreground rápidamente.
+         *
+         * No esperamos a que ExoPlayer comience a reproducir ni a obtener
+         * el MusicPlayerManager para cumplir esta obligación.
+         */
+        val notification = createStartupNotification()
+
         try {
-            startForeground(
-                NOTIFICATION_ID,
-                createStartupNotification()
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification
+                )
+            }
 
             AppLogger.i(
                 "SERVICE",
-                "PlaybackService convertido a foreground correctamente"
+                "PlaybackService puesto en foreground correctamente"
             )
         } catch (e: Exception) {
             AppLogger.e(
                 "SERVICE",
-                "ERROR al ejecutar startForeground",
+                "ERROR al ejecutar startForeground()",
                 e
             )
+            throw e
         }
 
+        /*
+         * Solo después de cumplir la obligación del foreground service
+         * obtenemos el MusicPlayerManager.
+         */
         musicPlayerManager =
             MusicPlayerManager.getInstance(applicationContext)
 
@@ -60,12 +84,34 @@ class PlaybackService : MediaSessionService() {
     override fun onGetSession(
         controllerInfo: MediaSession.ControllerInfo
     ): MediaSession? {
-        return musicPlayerManager.mediaSession
+        val session = musicPlayerManager.mediaSession
+
+        AppLogger.i(
+            "SERVICE",
+            "onGetSession -> session=${session != null}"
+        )
+
+        return session
     }
 
     override fun onDestroy() {
-        AppLogger.i("SERVICE", "PlaybackService.onDestroy")
+        AppLogger.i(
+            "SERVICE",
+            "PlaybackService.onDestroy"
+        )
+
         super.onDestroy()
+    }
+
+    private fun createStartupNotification(): Notification {
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("Unas Rolitas")
+            .setContentText("Reproducción de música")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .build()
     }
 
     private fun createNotificationChannel() {
@@ -83,17 +129,11 @@ class PlaybackService : MediaSessionService() {
                 getSystemService(NotificationManager::class.java)
 
             manager.createNotificationChannel(channel)
-        }
-    }
 
-    private fun createStartupNotification(): Notification {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Unas Rolitas")
-            .setContentText("Preparando reproducción…")
-            .setOngoing(true)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+            AppLogger.i(
+                "SERVICE",
+                "NotificationChannel creado/verificado"
+            )
+        }
     }
 }

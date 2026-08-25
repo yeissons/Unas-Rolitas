@@ -1,8 +1,6 @@
 package com.unasrolitas.app.player
 
 import android.content.Context
-import android.content.Intent
-import android.os.Build
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -12,7 +10,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.unasrolitas.app.audio.AudioDspManager
 import com.unasrolitas.app.data.model.Song
-import com.unasrolitas.app.service.PlaybackService
 import com.unasrolitas.app.util.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +60,6 @@ class MusicPlayerManager private constructor(private val context: Context) {
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var progressJob: Job? = null
     private var sleepTimerJob: Job? = null
-    private var playbackServiceStarted = false
 
     init {
         try {
@@ -87,7 +83,6 @@ class MusicPlayerManager private constructor(private val context: Context) {
 
                 if (isPlaying) {
                     startProgressTracker()
-                    startPlaybackService()
 
                     val audioSessionId = _exoPlayer.audioSessionId
                     if (audioSessionId > 0) {
@@ -143,28 +138,6 @@ class MusicPlayerManager private constructor(private val context: Context) {
                 }
             }
         })
-    }
-
-    private fun startPlaybackService() {
-        if (playbackServiceStarted) return
-
-        try {
-            val intent = Intent(context, PlaybackService::class.java)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
-
-            playbackServiceStarted = true
-        } catch (e: Exception) {
-            AppLogger.e(
-                "SERVICE",
-                "No se pudo iniciar PlaybackService",
-                e
-            )
-        }
     }
 
     private fun startProgressTracker() {
@@ -329,8 +302,6 @@ class MusicPlayerManager private constructor(private val context: Context) {
 
         sleepTimerJob?.cancel()
         sleepTimerJob = null
-
-        playbackServiceStarted = false
 
         dspManager.release()
 
