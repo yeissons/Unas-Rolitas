@@ -21,7 +21,8 @@ import com.unasrolitas.app.ui.theme.*
 
 @Composable
 fun ControlCenterScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onExportLog: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -70,6 +71,30 @@ fun ControlCenterScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize()
         ) {
+            item {
+                SettingCard(
+                    icon = Icons.Default.BugReport,
+                    title = "Registro de Diagnóstico / Crash Log",
+                    subtitle = "Exporta el registro interno de la aplicación para diagnosticar cierres inesperados, errores del reproductor y problemas del DSP.",
+                    badge = "Exportar"
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = onExportLog,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FileDownload,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Exportar registro de diagnóstico")
+                }
+            }
+
             item {
                 SettingCard(
                     icon = Icons.Default.Folder,

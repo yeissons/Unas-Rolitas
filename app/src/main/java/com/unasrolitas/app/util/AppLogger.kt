@@ -1,6 +1,7 @@
 package com.unasrolitas.app.util
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -22,6 +23,31 @@ object AppLogger {
     fun init(context: Context) {
         appContext = context.applicationContext
         i("LOGGER", "Logger inicializado")
+    }
+
+    fun exportToUri(context: Context, uri: Uri): Boolean {
+        return runCatching {
+            val file = appContext
+                ?.filesDir
+                ?.resolve(FILE_NAME)
+
+            if (file == null || !file.exists()) {
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write("Unas Rolitas - no hay registro disponible.\\n".toByteArray())
+                } ?: error("No se pudo abrir el destino")
+            } else {
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    file.inputStream().use { input ->
+                        input.copyTo(output)
+                    }
+                } ?: error("No se pudo abrir el destino")
+            }
+
+            true
+        }.getOrElse {
+            e("LOGGER", "Error exportando log", it)
+            false
+        }
     }
 
     fun i(area: String, message: String) {

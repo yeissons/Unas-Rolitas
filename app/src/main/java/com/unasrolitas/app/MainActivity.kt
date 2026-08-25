@@ -1,9 +1,12 @@
 package com.unasrolitas.app
 
+import android.app.Application
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -31,6 +34,7 @@ import com.unasrolitas.app.ui.theme.OrangePrimary
 import com.unasrolitas.app.ui.theme.TextSecondary
 import com.unasrolitas.app.ui.theme.UnasRolitasTheme
 import com.unasrolitas.app.viewmodel.MusicViewModel
+import com.unasrolitas.app.util.AppLogger
 
 class MainActivity : ComponentActivity() {
 
@@ -81,6 +85,23 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun UnasRolitasMainContent(viewModel: MusicViewModel) {
     val navController = rememberNavController()
+
+    val exportLogLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri != null) {
+            val success = AppLogger.exportToUri(
+                context = viewModel.getApplication<Application>(),
+                uri = uri
+            )
+
+            if (success) {
+                AppLogger.i("LOGGER", "Log exportado correctamente")
+            } else {
+                AppLogger.e("LOGGER", "No se pudo exportar el log")
+            }
+        }
+    }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: NavRoutes.Library.route
 
@@ -236,7 +257,10 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
 
                 composable(NavRoutes.ControlCenter.route) {
                     ControlCenterScreen(
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onExportLog = {
+                            exportLogLauncher.launch("unasrolitas-debug.log")
+                        }
                     )
                 }
             }
