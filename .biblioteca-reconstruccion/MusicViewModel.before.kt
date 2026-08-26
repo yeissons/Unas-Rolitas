@@ -136,136 +136,45 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         val songs = _allSongs.value
 
         return when (tab) {
-            "SONGS" -> {
-                songs.sortedBy { it.title.trim().lowercase() }
-            }
+            "FAVORITES" ->
+                songs.filter { it.isFavorite }
 
-            "ALBUMS" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.album.trim().ifBlank { "Álbum desconocido" }
-                            .lowercase()
-                    }.thenBy {
-                        it.artist.trim().lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-            }
+            "MOST_PLAYED" ->
+                songs.sortedByDescending { it.playCount }
 
-            "ARTISTS" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.artist.trim().ifBlank { "Artista desconocido" }
-                            .lowercase()
-                    }.thenBy {
-                        it.album.trim().lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-            }
-
-            "FOLDERS" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        folderNameForLibrary(it.filePath).lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-            }
-
-            "PLAYLISTS" -> {
-                songs
-            }
-
-            "GENRES" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.genre?.trim()
-                            .takeUnless { value -> value.isNullOrBlank() }
-                            ?: "Sin género"
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-            }
-
-            "FAVORITES" -> {
-                songs
-                    .filter { it.isFavorite }
-                    .sortedBy { it.title.trim().lowercase() }
-            }
-
-            "MOST_PLAYED" -> {
-                songs.sortedWith(
-                    compareByDescending<Song> { it.playCount }
-                        .thenBy { it.title.trim().lowercase() }
-                )
-            }
-
-            "RECENTLY_ADDED" -> {
+            "RECENTLY_ADDED" ->
                 songs.sortedByDescending { it.id }
-            }
 
             "HISTORY" -> {
                 val byId = songs.associateBy { it.id }
-
                 prefsRepository
                     .getRecentlyPlayed()
                     .mapNotNull { byId[it] }
             }
 
-            "DOWNLOADED" -> {
-                songs
-                    .filter { song ->
-                        song.filePath.contains(
-                            "/Download/",
-                            ignoreCase = true
-                        ) ||
-                        song.filePath.contains(
-                            "/Downloads/",
-                            ignoreCase = true
-                        )
-                    }
-                    .sortedBy { it.title.trim().lowercase() }
-            }
+            "DOWNLOADED" ->
+                songs.filter { song ->
+                    song.filePath.contains(
+                        "/Download/",
+                        ignoreCase = true
+                    ) ||
+                    song.filePath.contains(
+                        "/Downloads/",
+                        ignoreCase = true
+                    )
+                }
 
-            "PODCASTS" -> {
-                songs
-                    .filter { song ->
-                        val title = song.title
-                        val album = song.album
-                        val genre = song.genre.orEmpty()
+            "PODCASTS" ->
+                songs.filter { song ->
+                    song.mimeType?.contains("audio", true) == true &&
+                    (
+                        song.title.contains("podcast", true) ||
+                        song.album.contains("podcast", true) ||
+                        song.genre?.contains("podcast", true) == true
+                    )
+                }
 
-                        title.contains("podcast", ignoreCase = true) ||
-                        album.contains("podcast", ignoreCase = true) ||
-                        genre.contains("podcast", ignoreCase = true)
-                    }
-                    .sortedBy { it.title.trim().lowercase() }
-            }
-
-            else -> {
-                songs.sortedBy { it.title.trim().lowercase() }
-            }
-        }
-    }
-
-    private fun folderNameForLibrary(path: String): String {
-        if (path.isBlank()) return "Almacenamiento"
-
-        val normalized = path
-            .replace('\\', '/')
-            .trimEnd('/')
-
-        val slash = normalized.lastIndexOf('/')
-
-        return if (slash >= 0) {
-            normalized.substring(slash + 1)
-                .ifBlank { "Almacenamiento" }
-        } else {
-            normalized
+            else -> songs
         }
     }
 
@@ -285,21 +194,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         prefsRepository.registerRecentlyPlayed(song.id)
 
         if (index != -1) {
-            _allSongs.value = list.map { current ->
-                if (current.id == song.id) {
-                    current.copy(
-                        playCount = current.playCount + 1
-                    )
-                } else {
-                    current
-                }
-            }
-
-            playerManager.setQueue(
-                _allSongs.value,
-                _allSongs.value.indexOfFirst { it.id == song.id },
-                autoPlay = true
-            )
+            playerManager.setQueue(list, index, autoPlay = true)
         } else {
             playerManager.setQueue(listOf(song), 0, autoPlay = true)
         }
