@@ -244,8 +244,6 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                     activeTab = activeTab,
                     onTabSelected = { viewModel.setActiveTab(it) },
                     onOpenControlCenter = { navController.navigate(NavRoutes.ControlCenter.route) },
-                    onOpenEqualizer = { navController.navigate(NavRoutes.Equalizer.route) },
-                    onOpenAudioTools = { navController.navigate(NavRoutes.AudioTools.route) },
                     onShuffleAll = {
                         viewModel.toggleShuffle()
                         if (songs.isNotEmpty()) {
@@ -295,9 +293,6 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                         },
                         onSongMenuClick = { song ->
                             viewModel.setSelectedSongForMenu(song)
-                        },
-                        onScanMediaStore = {
-                            viewModel.loadLibrary()
                         }
                     )
                 }

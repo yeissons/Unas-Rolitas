@@ -40,8 +40,7 @@ fun LibraryScreen(
     activeTab: String,
     onSongSelect: (Song) -> Unit,
     onFavoriteToggle: (Song) -> Unit,
-    onSongMenuClick: (Song) -> Unit,
-    onScanMediaStore: () -> Unit
+    onSongMenuClick: (Song) -> Unit
 ) {
     val filteredSongs = remember(songs, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -167,9 +166,7 @@ fun LibraryScreen(
                     EmptyStateView(
                         icon = Icons.Default.MusicOff,
                         title = "No se encontraron canciones",
-                        subtitle = "Escanea tu almacenamiento interno para detectar archivos de audio.",
-                        buttonText = "Escanear Almacenamiento",
-                        onButtonClick = onScanMediaStore
+                        subtitle = "No hay canciones disponibles en esta categoría."
                     )
                 } else {
                     SongListView(
@@ -179,8 +176,7 @@ fun LibraryScreen(
                         onSongSelect = onSongSelect,
                         onFavoriteToggle = onFavoriteToggle,
                         onSongMenuClick = onSongMenuClick,
-                        showHeader = true,
-                        onScanMediaStore = onScanMediaStore
+                        showHeader = true
                     )
                 }
             }
@@ -196,8 +192,7 @@ private fun SongListView(
     onSongSelect: (Song) -> Unit,
     onFavoriteToggle: (Song) -> Unit,
     onSongMenuClick: (Song) -> Unit,
-    showHeader: Boolean = false,
-    onScanMediaStore: (() -> Unit)? = null
+    showHeader: Boolean = false
 ) {
     LazyColumn(
         contentPadding = PaddingValues(bottom = 120.dp),
@@ -219,32 +214,6 @@ private fun SongListView(
                         color = TextSecondary
                     )
 
-                    if (onScanMediaStore != null) {
-                        Button(
-                            onClick = onScanMediaStore,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = DarkCard
-                            ),
-                            shape = RoundedCornerShape(16.dp),
-                            contentPadding = PaddingValues(
-                                horizontal = 12.dp,
-                                vertical = 4.dp
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Actualizar",
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                "Re-escanear",
-                                fontSize = 12.sp,
-                                color = Color.White
-                            )
-                        }
-                    }
                 }
             }
         }

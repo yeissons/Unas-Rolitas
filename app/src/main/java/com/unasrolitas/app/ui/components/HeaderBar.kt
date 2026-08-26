@@ -28,8 +28,6 @@ fun HeaderBar(
     activeTab: String,
     onTabSelected: (String) -> Unit,
     onOpenControlCenter: () -> Unit,
-    onOpenEqualizer: () -> Unit,
-    onOpenAudioTools: () -> Unit,
     onShuffleAll: () -> Unit
 ) {
     var isSearchOpen by remember { mutableStateOf(false) }
@@ -344,25 +342,6 @@ fun HeaderBar(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            IconButton(
-                onClick = onOpenEqualizer
-            ) {
-                Icon(
-                    imageVector = Icons.Default.GraphicEq,
-                    contentDescription = "Ecualizador",
-                    tint = TextSecondary
-                )
-            }
-
-            IconButton(
-                onClick = onOpenAudioTools
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = "Herramientas de audio",
-                    tint = TextSecondary
-                )
-            }
         }
 
         HorizontalDivider(
