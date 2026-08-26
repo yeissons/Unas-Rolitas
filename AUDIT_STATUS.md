@@ -5,13 +5,8 @@
 - ZIP de origen: `unasrolitas.zip`
 - Proyecto extraído: 80 archivos, 37 directorios.
 - Android nativo: módulo `app/` con Gradle Wrapper y workflow de GitHub Actions.
-- Web Preview: aislado físicamente en `web-preview/`.
-- No se encontraron datos de canciones simuladas dentro del código Android.
-- Sí existen datos simulados en `web-preview/src/data/mockData.ts`; quedan limitados a la demo web.
-
 ## Correcciones aplicadas durante esta revisión
 
-1. Se aisló la previsualización Web dentro de `web-preview/`.
 2. Se eliminó la metadata técnica falsa por defecto del modelo Android `Song` (bitrate, sample rate y bit depth).
 3. `MediaStoreRepository` dejó de depender de `MediaStore.Audio.Media.DATA` para construir la URI principal.
 4. La consulta Android conserva únicamente metadata realmente disponible y evita inventar valores técnicos.

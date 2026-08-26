@@ -1,6 +1,0 @@
-{
-  "name": "¿Unas Rolitas?",
-  "description": "Reproductor de música nativo Android con reproductor de vinilo, ecualizador DSP, letras sincronizadas, gestión de biblioteca y flujo de CI/CD para GitHub Actions.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
