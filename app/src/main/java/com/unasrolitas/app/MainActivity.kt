@@ -1,13 +1,16 @@
 package com.unasrolitas.app
 
+import android.Manifest
 import android.app.Application
 import android.content.Intent
-import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -25,7 +28,6 @@ import androidx.navigation.compose.rememberNavController
 import com.unasrolitas.app.data.model.Song
 import com.unasrolitas.app.navigation.NavRoutes
 import com.unasrolitas.app.permissions.PermissionHandler
-import com.unasrolitas.app.service.PlaybackService
 import com.unasrolitas.app.ui.components.BottomDockPlayer
 import com.unasrolitas.app.ui.components.ContextMenuBottomSheet
 import com.unasrolitas.app.ui.components.HeaderBar
@@ -44,30 +46,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        /*
-         * Media3 PlaybackService debe arrancar antes de crear el
-         * MusicViewModel/MusicPlayerManager.
-         *
-         * PlaybackService ejecuta startForeground() inmediatamente
-         * en onCreate(), evitando iniciar el foreground service
-         * desde onIsPlayingChanged(), que era demasiado tarde.
-         */
-        try {
-            val serviceIntent = Intent(this, PlaybackService::class.java)
-            ContextCompat.startForegroundService(this, serviceIntent)
-
-            AppLogger.i(
-                "SERVICE",
-                "PlaybackService solicitado desde MainActivity"
-            )
-        } catch (e: Exception) {
-            AppLogger.e(
-                "SERVICE",
-                "No se pudo iniciar PlaybackService desde MainActivity",
-                e
-            )
-        }
 
         val incomingUri = intent?.data
 
@@ -112,6 +90,41 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun UnasRolitasMainContent(viewModel: MusicViewModel) {
     val navController = rememberNavController()
+
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            AppLogger.i(
+                "NOTIFICATION_PERMISSION",
+                "POST_NOTIFICATIONS resultado=$granted"
+            )
+        }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                viewModel.getApplication<Application>(),
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!granted) {
+                AppLogger.i(
+                    "NOTIFICATION_PERMISSION",
+                    "Solicitando POST_NOTIFICATIONS"
+                )
+
+                notificationPermissionLauncher.launch(
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            } else {
+                AppLogger.i(
+                    "NOTIFICATION_PERMISSION",
+                    "POST_NOTIFICATIONS ya concedido"
+                )
+            }
+        }
+    }
 
     val exportLogLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/plain")
