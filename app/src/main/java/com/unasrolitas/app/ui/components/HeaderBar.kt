@@ -169,13 +169,23 @@ fun HeaderBar(
 
         /*
          * CATEGORÍAS PRINCIPALES
+         *
+         * Las cuatro categorías más importantes permanecen
+         * siempre visibles:
+         *
+         * Canciones → Álbumes → Artistas → Carpetas
+         *
+         * Las demás categorías se encuentran dentro de "Más >".
          */
-        val tabs = listOf(
+        val primaryTabs = listOf(
             "SONGS" to "Canciones",
-            "PLAYLISTS" to "Listas de reproducción",
-            "FOLDERS" to "Carpetas",
             "ALBUMS" to "Álbumes",
             "ARTISTS" to "Artistas",
+            "FOLDERS" to "Carpetas"
+        )
+
+        val secondaryTabs = listOf(
+            "PLAYLISTS" to "Listas de reproducción",
             "GENRES" to "Géneros",
             "FAVORITES" to "Favoritos",
             "MOST_PLAYED" to "Más reproducidas",
@@ -185,44 +195,117 @@ fun HeaderBar(
             "PODCASTS" to "Podcasts"
         )
 
+        var showMoreTabs by rememberSaveable { mutableStateOf(false) }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            tabs.forEach { (key, label) ->
-
+            primaryTabs.forEach { (key, label) ->
                 val selected = activeTab == key
 
                 Surface(
                     onClick = { onTabSelected(key) },
-                    color = if (selected) {
-                        OrangePrimary
-                    } else {
-                        DarkCard
-                    },
+                    color = if (selected) OrangePrimary else DarkCard,
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Text(
                         text = label,
                         modifier = Modifier.padding(
-                            horizontal = 15.dp,
+                            horizontal = 14.dp,
                             vertical = 8.dp
                         ),
-                        color = if (selected) {
-                            Color.White
-                        } else {
-                            TextSecondary
-                        },
+                        color = if (selected) Color.White else TextSecondary,
                         fontSize = 13.sp,
                         fontWeight = if (selected) {
                             FontWeight.Bold
                         } else {
                             FontWeight.Medium
-                        }
+                        },
+                        maxLines = 1
                     )
+                }
+            }
+
+            Surface(
+                onClick = { showMoreTabs = !showMoreTabs },
+                color = if (showMoreTabs) OrangePrimary else DarkCard,
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(
+                        horizontal = 11.dp,
+                        vertical = 8.dp
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Más",
+                        color = if (showMoreTabs) Color.White else TextSecondary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Spacer(modifier = Modifier.width(2.dp))
+
+                    Icon(
+                        imageVector = if (showMoreTabs) {
+                            Icons.Default.ExpandLess
+                        } else {
+                            Icons.Default.ChevronRight
+                        },
+                        contentDescription = if (showMoreTabs) {
+                            "Ocultar categorías"
+                        } else {
+                            "Mostrar más categorías"
+                        },
+                        tint = if (showMoreTabs) Color.White else TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+
+        if (showMoreTabs) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(
+                        start = 14.dp,
+                        end = 14.dp,
+                        top = 7.dp
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                secondaryTabs.forEach { (key, label) ->
+                    val selected = activeTab == key
+
+                    Surface(
+                        onClick = { onTabSelected(key) },
+                        color = if (selected) OrangePrimary else DarkSurface,
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            modifier = Modifier.padding(
+                                horizontal = 14.dp,
+                                vertical = 8.dp
+                            ),
+                            color = if (selected) Color.White else TextSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = if (selected) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Medium
+                            },
+                            maxLines = 1
+                        )
+                    }
                 }
             }
         }
