@@ -36,11 +36,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _activeTab = MutableStateFlow("SONGS")
-    // Categorías:
-    // SONGS, ALBUMS, ARTISTS, FAVORITES, PLAYLISTS, GENRES,
-    // FOLDERS, MOST_PLAYED, RECENTLY_ADDED, HISTORY,
-    // DOWNLOADED, PODCASTS, AUDIOBOOKS
+    private val _activeTab = MutableStateFlow("SONGS") // SONGS, PLAYLISTS, FAVORITES
     val activeTab: StateFlow<String> = _activeTab.asStateFlow()
 
     private val _audioSettings = MutableStateFlow(prefsRepository.getAudioSettings())
@@ -250,37 +246,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                     .sortedBy { it.title.trim().lowercase() }
             }
 
-            "AUDIOBOOKS" -> {
-                songs
-                    .filter { song ->
-                        val title = song.title
-                        val artist = song.artist
-                        val album = song.album
-                        val genre = song.genre.orEmpty()
-                        val path = song.filePath
-
-                        title.contains("audiolibro", ignoreCase = true) ||
-                        title.contains("audiobook", ignoreCase = true) ||
-                        artist.contains("audiolibro", ignoreCase = true) ||
-                        artist.contains("audiobook", ignoreCase = true) ||
-                        album.contains("audiolibro", ignoreCase = true) ||
-                        album.contains("audiobook", ignoreCase = true) ||
-                        genre.contains("audiolibro", ignoreCase = true) ||
-                        genre.contains("audiobook", ignoreCase = true) ||
-                        path.contains("audiolibro", ignoreCase = true) ||
-                        path.contains("audiobooks", ignoreCase = true) ||
-                        path.contains("/books/", ignoreCase = true) ||
-                        path.contains("/book/", ignoreCase = true)
-                    }
-                    .sortedWith(
-                        compareBy<Song> {
-                            it.album.trim().lowercase()
-                        }.thenBy {
-                            it.title.trim().lowercase()
-                        }
-                    )
-            }
-
             else -> {
                 songs.sortedBy { it.title.trim().lowercase() }
             }
@@ -313,76 +278,30 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playSong(song: Song) {
-        playSongInContext(_allSongs.value, song)
-    }
-
-    /*
-     * Reproduce una canción dentro del contexto que la UI haya
-     * seleccionado: biblioteca completa, álbum, artista, género,
-     * carpeta, favoritos, etc.
-     *
-     * La canción seleccionada es el primer elemento de reproducción.
-     * Después continúan las demás canciones del mismo contexto.
-     */
-    fun playSongInContext(contextSongs: List<Song>, song: Song) {
-        if (contextSongs.isEmpty()) return
-
-        val context = contextSongs.distinctBy { it.id }
-        val selectedIndex = context.indexOfFirst { it.id == song.id }
-
-        if (selectedIndex == -1) {
-            playSong(song)
-            return
-        }
+        val list = _allSongs.value
+        val index = list.indexOfFirst { it.id == song.id }
 
         prefsRepository.incrementPlayCount(song.id)
         prefsRepository.registerRecentlyPlayed(song.id)
 
-        _allSongs.value = _allSongs.value.map { current ->
-            if (current.id == song.id) {
-                current.copy(
-                    playCount = current.playCount + 1
-                )
-            } else {
-                current
+        if (index != -1) {
+            _allSongs.value = list.map { current ->
+                if (current.id == song.id) {
+                    current.copy(
+                        playCount = current.playCount + 1
+                    )
+                } else {
+                    current
+                }
             }
-        }
 
-        val updatedContext = context.map { current ->
-            if (current.id == song.id) {
-                current.copy(
-                    playCount = current.playCount + 1
-                )
-            } else {
-                current
-            }
-        }
-
-        playerManager.setQueue(
-            updatedContext,
-            selectedIndex,
-            autoPlay = true
-        )
-    }
-
-    /*
-     * Reproduce aleatoriamente ÚNICAMENTE el contexto recibido.
-     * No usa songs.random() sobre la biblioteca global.
-     */
-    fun shuffleContext(contextSongs: List<Song>) {
-        val context = contextSongs.distinctBy { it.id }
-        if (context.isEmpty()) return
-
-        val start = context.indices.random()
-
-        playerManager.setQueue(
-            context,
-            start,
-            autoPlay = true
-        )
-
-        if (!playerManager.isShuffleEnabled()) {
-            playerManager.toggleShuffle()
+            playerManager.setQueue(
+                _allSongs.value,
+                _allSongs.value.indexOfFirst { it.id == song.id },
+                autoPlay = true
+            )
+        } else {
+            playerManager.setQueue(listOf(song), 0, autoPlay = true)
         }
     }
 

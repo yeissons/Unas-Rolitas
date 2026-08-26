@@ -40,8 +40,7 @@ fun LibraryScreen(
     activeTab: String,
     onSongSelect: (Song) -> Unit,
     onFavoriteToggle: (Song) -> Unit,
-    onSongMenuClick: (Song) -> Unit,
-    onPlaybackContextChanged: (List<Song>?) -> Unit
+    onSongMenuClick: (Song) -> Unit
 ) {
     val filteredSongs = remember(songs, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -57,219 +56,101 @@ fun LibraryScreen(
         }
     }
 
-    /*
-     * selectedGroup representa el CONTEXTO interno de la biblioteca.
-     *
-     * La pestaña Álbumes, Artistas, Géneros, Carpetas, etc. muestra
-     * primero una lista de grupos. Al entrar a uno de ellos, el
-     * contexto cambia a sus canciones.
-     *
-     * No existe una pestaña "Biblioteca" adicional.
-     */
-    var selectedGroup by remember(activeTab) {
-        androidx.compose.runtime.mutableStateOf<LibraryGroup?>(null)
-    }
-
-    val detailSongs = remember(
-        filteredSongs,
-        selectedGroup,
-        activeTab
-    ) {
-        selectedGroup?.songs?.let { groupSongs ->
-            val ids = groupSongs.map { it.id }.toSet()
-            filteredSongs.filter { it.id in ids }
-        }
-    }
-
-    /*
-     * El HeaderBar necesita saber si el contexto actual permite
-     * "Reproducir aleatorio".
-     *
-     * Lista de grupos = null => botón desactivado.
-     * Lista de canciones = lista real => botón disponible.
-     */
-    androidx.compose.runtime.LaunchedEffect(
-        activeTab,
-        selectedGroup,
-        filteredSongs,
-        detailSongs
-    ) {
-        onPlaybackContextChanged(
-            when {
-                selectedGroup != null -> detailSongs ?: emptyList()
-                activeTab == "SONGS" -> filteredSongs
-                activeTab == "FAVORITES" -> filteredSongs
-                activeTab == "MOST_PLAYED" -> filteredSongs
-                activeTab == "RECENTLY_ADDED" -> filteredSongs
-                activeTab == "HISTORY" -> filteredSongs
-                activeTab == "DOWNLOADED" -> filteredSongs
-                activeTab == "PODCASTS" -> filteredSongs
-                activeTab == "AUDIOBOOKS" -> filteredSongs
-                activeTab == "PLAYLISTS" -> null
-                activeTab == "ALBUMS" -> null
-                activeTab == "ARTISTS" -> null
-                activeTab == "GENRES" -> null
-                activeTab == "FOLDERS" -> null
-                else -> filteredSongs
-            }
-        )
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkCanvas)
     ) {
-        if (selectedGroup != null) {
-            val group = selectedGroup!!
-            val songsInGroup = detailSongs ?: emptyList()
+        when (activeTab) {
 
-            /*
-             * DETALLE DEL GRUPO
-             *
-             * El botón aleatorio NO aparece aquí. Sigue estando
-             * exclusivamente en HeaderBar. Aquí solamente mostramos
-             * el contenido contextual.
-             */
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = 14.dp,
-                        vertical = 8.dp
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {
-                        selectedGroup = null
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = Color.White
+            "PLAYLISTS" -> {
+                if (playlists.isEmpty()) {
+                    EmptyStateView(
+                        icon = Icons.Default.QueueMusic,
+                        title = "No hay listas de reproducción",
+                        subtitle = "Crea o añade canciones a una lista para verla aquí."
                     )
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = group.title,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-
-                    Text(
-                        text = group.subtitle,
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        maxLines = 1
-                    )
-                }
-            }
-
-            if (songsInGroup.isEmpty()) {
-                EmptyStateView(
-                    icon = Icons.Default.MusicOff,
-                    title = "No hay canciones",
-                    subtitle = "No se encontraron canciones en este grupo."
-                )
-            } else {
-                SongListView(
-                    songs = songsInGroup,
-                    currentSong = currentSong,
-                    isPlaying = isPlaying,
-                    onSongSelect = { song ->
-                        /*
-                         * Importante:
-                         * MainActivity recibe la canción y el ViewModel
-                         * utilizará el contexto actual para construir
-                         * la cola completa.
-                         */
-                        onSongSelect(song)
-                    },
-                    onFavoriteToggle = onFavoriteToggle,
-                    onSongMenuClick = onSongMenuClick,
-                    showHeader = true
-                )
-            }
-        } else {
-            when (activeTab) {
-
-                "PLAYLISTS" -> {
-                    if (playlists.isEmpty()) {
-                        EmptyStateView(
-                            icon = Icons.Default.QueueMusic,
-                            title = "No hay listas de reproducción",
-                            subtitle = "Crea o añade canciones a una lista para verla aquí."
-                        )
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = 12.dp,
-                                bottom = 120.dp
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(playlists) { playlist ->
-                                PlaylistCardItem(
-                                    playlist = playlist,
-                                    songs = songs,
-                                    onClick = {
-                                        val playlistSongs = playlist.songIds.mapNotNull { id ->
-                                            songs.find { it.id == id }
-                                        }
-
-                                        if (playlistSongs.isNotEmpty()) {
-                                            onPlaybackContextChanged(playlistSongs)
-                                            onSongSelect(playlistSongs.first())
-                                        }
-                                    }
-                                )
-                            }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 12.dp,
+                            bottom = 120.dp
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(playlists) { playlist ->
+                            PlaylistCardItem(
+                                playlist = playlist,
+                                songs = songs,
+                                onClick = {
+                                    val firstSongId = playlist.songIds.firstOrNull()
+                                    val match = songs.find { it.id == firstSongId }
+                                    match?.let(onSongSelect)
+                                }
+                            )
                         }
                     }
                 }
+            }
 
-                "ALBUMS" -> {
-                    AlbumLibraryView(
-                        songs = filteredSongs,
-                        onGroupSelected = { selectedGroup = it }
+            "ALBUMS" -> {
+                AlbumLibraryView(
+                    songs = filteredSongs,
+                    currentSong = currentSong,
+                    isPlaying = isPlaying,
+                    onSongSelect = onSongSelect,
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSongMenuClick = onSongMenuClick
+                )
+            }
+
+            "ARTISTS" -> {
+                ArtistLibraryView(
+                    songs = filteredSongs,
+                    currentSong = currentSong,
+                    isPlaying = isPlaying,
+                    onSongSelect = onSongSelect,
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSongMenuClick = onSongMenuClick
+                )
+            }
+
+            "FOLDERS" -> {
+                FolderLibraryView(
+                    songs = filteredSongs,
+                    currentSong = currentSong,
+                    isPlaying = isPlaying,
+                    onSongSelect = onSongSelect,
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSongMenuClick = onSongMenuClick
+                )
+            }
+
+            "GENRES" -> {
+                GenreLibraryView(
+                    songs = filteredSongs,
+                    currentSong = currentSong,
+                    isPlaying = isPlaying,
+                    onSongSelect = onSongSelect,
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSongMenuClick = onSongMenuClick
+                )
+            }
+
+            "FAVORITES" -> {
+                if (filteredSongs.isEmpty()) {
+                    EmptyStateView(
+                        icon = Icons.Default.FavoriteBorder,
+                        title = "Sin Rolitas Favoritas",
+                        subtitle = "Toca el corazón en cualquier canción para guardarla aquí."
                     )
-                }
-
-                "ARTISTS" -> {
-                    ArtistLibraryView(
-                        songs = filteredSongs,
-                        onGroupSelected = { selectedGroup = it }
-                    )
-                }
-
-                "GENRES" -> {
-                    GenreLibraryView(
-                        songs = filteredSongs,
-                        onGroupSelected = { selectedGroup = it }
-                    )
-                }
-
-                "FOLDERS" -> {
-                    FolderLibraryView(
-                        songs = filteredSongs,
-                        onGroupSelected = { selectedGroup = it }
-                    )
-                }
-
-                "AUDIOBOOKS" -> {
-                    AudiobookLibraryView(
+                } else {
+                    SongListView(
                         songs = filteredSongs,
                         currentSong = currentSong,
                         isPlaying = isPlaying,
@@ -278,44 +159,25 @@ fun LibraryScreen(
                         onSongMenuClick = onSongMenuClick
                     )
                 }
+            }
 
-                "FAVORITES" -> {
-                    if (filteredSongs.isEmpty()) {
-                        EmptyStateView(
-                            icon = Icons.Default.FavoriteBorder,
-                            title = "Sin Rolitas Favoritas",
-                            subtitle = "Toca el corazón en cualquier canción para guardarla aquí."
-                        )
-                    } else {
-                        SongListView(
-                            songs = filteredSongs,
-                            currentSong = currentSong,
-                            isPlaying = isPlaying,
-                            onSongSelect = onSongSelect,
-                            onFavoriteToggle = onFavoriteToggle,
-                            onSongMenuClick = onSongMenuClick
-                        )
-                    }
-                }
-
-                else -> {
-                    if (filteredSongs.isEmpty()) {
-                        EmptyStateView(
-                            icon = Icons.Default.MusicOff,
-                            title = "No se encontraron canciones",
-                            subtitle = "No hay canciones disponibles en esta categoría."
-                        )
-                    } else {
-                        SongListView(
-                            songs = filteredSongs,
-                            currentSong = currentSong,
-                            isPlaying = isPlaying,
-                            onSongSelect = onSongSelect,
-                            onFavoriteToggle = onFavoriteToggle,
-                            onSongMenuClick = onSongMenuClick,
-                            showHeader = true
-                        )
-                    }
+            else -> {
+                if (filteredSongs.isEmpty()) {
+                    EmptyStateView(
+                        icon = Icons.Default.MusicOff,
+                        title = "No se encontraron canciones",
+                        subtitle = "No hay canciones disponibles en esta categoría."
+                    )
+                } else {
+                    SongListView(
+                        songs = filteredSongs,
+                        currentSong = currentSong,
+                        isPlaying = isPlaying,
+                        onSongSelect = onSongSelect,
+                        onFavoriteToggle = onFavoriteToggle,
+                        onSongMenuClick = onSongMenuClick,
+                        showHeader = true
+                    )
                 }
             }
         }
@@ -373,7 +235,7 @@ private fun SongListView(
 }
 
 @Composable
-private fun AudiobookLibraryView(
+private fun AlbumLibraryView(
     songs: List<Song>,
     currentSong: Song?,
     isPlaying: Boolean,
@@ -381,93 +243,18 @@ private fun AudiobookLibraryView(
     onFavoriteToggle: (Song) -> Unit,
     onSongMenuClick: (Song) -> Unit
 ) {
-    if (songs.isEmpty()) {
-        EmptyStateView(
-            icon = Icons.Default.MenuBook,
-            title = "No hay audiolibros",
-            subtitle = "No se encontraron archivos identificados como audiolibros."
-        )
-    } else {
-        val chapters = remember(songs) {
-            songs.sortedWith(
-                compareBy<Song> {
-                    it.album.trim().ifBlank { "Audiolibro desconocido" }
-                        .lowercase()
-                }.thenBy {
-                    it.title.trim().lowercase()
-                }
-            )
-        }
-
-        LazyColumn(
-            contentPadding = PaddingValues(bottom = 120.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "${chapters.size} capítulos",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextSecondary
-                        )
-
-                        Text(
-                            text = "Audiolibros",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
-                    }
-                }
-            }
-
-            items(
-                items = chapters,
-                key = { it.id }
-            ) { song ->
-                SongRowItem(
-                    song = song,
-                    isCurrentSong = currentSong?.id == song.id,
-                    isPlaying = isPlaying,
-                    onClick = { onSongSelect(song) },
-                    onFavoriteToggle = { onFavoriteToggle(song) },
-                    onMenuClick = { onSongMenuClick(song) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AlbumLibraryView(
-    songs: List<Song>,
-    onGroupSelected: (LibraryGroup) -> Unit
-) {
     val albums = remember(songs) {
         songs
-            .groupBy {
-                "${it.album.trim()}|${it.artist.trim()}"
-            }
+            .groupBy { "${it.album.trim()}|${it.artist.trim()}" }
             .map { (_, tracks) ->
                 LibraryGroup(
                     title = tracks.first().album.ifBlank { "Álbum desconocido" },
                     subtitle = tracks.first().artist.ifBlank { "Artista desconocido" },
                     count = tracks.size,
-                    song = tracks.first(),
-                    songs = tracks
+                    song = tracks.first()
                 )
             }
-            .sortedWith(
-                compareBy<LibraryGroup> { it.title.lowercase() }
-                    .thenBy { it.subtitle.lowercase() }
-            )
+            .sortedBy { it.title.lowercase() }
     }
 
     if (albums.isEmpty()) {
@@ -481,14 +268,11 @@ private fun AlbumLibraryView(
             contentPadding = PaddingValues(bottom = 120.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(
-                albums,
-                key = { it.title + "|" + it.subtitle }
-            ) { album ->
+            items(albums, key = { it.title + it.subtitle }) { album ->
                 GroupRowItem(
                     group = album,
                     icon = Icons.Default.Album,
-                    onClick = { onGroupSelected(album) }
+                    onClick = { onSongSelect(album.song) }
                 )
             }
         }
@@ -498,7 +282,11 @@ private fun AlbumLibraryView(
 @Composable
 private fun ArtistLibraryView(
     songs: List<Song>,
-    onGroupSelected: (LibraryGroup) -> Unit
+    currentSong: Song?,
+    isPlaying: Boolean,
+    onSongSelect: (Song) -> Unit,
+    onFavoriteToggle: (Song) -> Unit,
+    onSongMenuClick: (Song) -> Unit
 ) {
     val artists = remember(songs) {
         songs
@@ -510,8 +298,7 @@ private fun ArtistLibraryView(
                     title = artist,
                     subtitle = "${tracks.size} rolitas",
                     count = tracks.size,
-                    song = tracks.first(),
-                    songs = tracks
+                    song = tracks.first()
                 )
             }
             .sortedBy { it.title.lowercase() }
@@ -532,7 +319,7 @@ private fun ArtistLibraryView(
                 GroupRowItem(
                     group = artist,
                     icon = Icons.Default.Person,
-                    onClick = { onGroupSelected(artist) }
+                    onClick = { onSongSelect(artist.song) }
                 )
             }
         }
@@ -542,7 +329,11 @@ private fun ArtistLibraryView(
 @Composable
 private fun GenreLibraryView(
     songs: List<Song>,
-    onGroupSelected: (LibraryGroup) -> Unit
+    currentSong: Song?,
+    isPlaying: Boolean,
+    onSongSelect: (Song) -> Unit,
+    onFavoriteToggle: (Song) -> Unit,
+    onSongMenuClick: (Song) -> Unit
 ) {
     val genres = remember(songs) {
         songs
@@ -556,8 +347,7 @@ private fun GenreLibraryView(
                     title = genre,
                     subtitle = "${tracks.size} rolitas",
                     count = tracks.size,
-                    song = tracks.first(),
-                    songs = tracks
+                    song = tracks.first()
                 )
             }
             .sortedBy { it.title.lowercase() }
@@ -578,7 +368,7 @@ private fun GenreLibraryView(
                 GroupRowItem(
                     group = genre,
                     icon = Icons.Default.Category,
-                    onClick = { onGroupSelected(genre) }
+                    onClick = { onSongSelect(genre.song) }
                 )
             }
         }
@@ -588,18 +378,23 @@ private fun GenreLibraryView(
 @Composable
 private fun FolderLibraryView(
     songs: List<Song>,
-    onGroupSelected: (LibraryGroup) -> Unit
+    currentSong: Song?,
+    isPlaying: Boolean,
+    onSongSelect: (Song) -> Unit,
+    onFavoriteToggle: (Song) -> Unit,
+    onSongMenuClick: (Song) -> Unit
 ) {
     val folders = remember(songs) {
         songs
-            .groupBy { folderName(it.filePath) }
+            .groupBy { song ->
+                folderName(song.filePath)
+            }
             .map { (folder, tracks) ->
                 LibraryGroup(
                     title = folder,
                     subtitle = "${tracks.size} rolitas",
                     count = tracks.size,
-                    song = tracks.first(),
-                    songs = tracks
+                    song = tracks.first()
                 )
             }
             .sortedBy { it.title.lowercase() }
@@ -620,7 +415,7 @@ private fun FolderLibraryView(
                 GroupRowItem(
                     group = folder,
                     icon = Icons.Default.Folder,
-                    onClick = { onGroupSelected(folder) }
+                    onClick = { onSongSelect(folder.song) }
                 )
             }
         }
@@ -651,8 +446,7 @@ private data class LibraryGroup(
     val title: String,
     val subtitle: String,
     val count: Int,
-    val song: Song,
-    val songs: List<Song>
+    val song: Song
 )
 
 @Composable

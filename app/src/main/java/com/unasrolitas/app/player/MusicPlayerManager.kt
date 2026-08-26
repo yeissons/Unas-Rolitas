@@ -286,6 +286,8 @@ class MusicPlayerManager private constructor(private val context: Context) {
         _exoPlayer.shuffleModeEnabled = newShuffle
     }
 
+    fun isShuffleEnabled(): Boolean = _isShuffle.value
+
     fun toggleRepeatMode() {
         val nextMode = when (_repeatMode.value) {
             Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL

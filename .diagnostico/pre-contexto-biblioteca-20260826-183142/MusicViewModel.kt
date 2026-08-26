@@ -313,76 +313,30 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playSong(song: Song) {
-        playSongInContext(_allSongs.value, song)
-    }
-
-    /*
-     * Reproduce una canción dentro del contexto que la UI haya
-     * seleccionado: biblioteca completa, álbum, artista, género,
-     * carpeta, favoritos, etc.
-     *
-     * La canción seleccionada es el primer elemento de reproducción.
-     * Después continúan las demás canciones del mismo contexto.
-     */
-    fun playSongInContext(contextSongs: List<Song>, song: Song) {
-        if (contextSongs.isEmpty()) return
-
-        val context = contextSongs.distinctBy { it.id }
-        val selectedIndex = context.indexOfFirst { it.id == song.id }
-
-        if (selectedIndex == -1) {
-            playSong(song)
-            return
-        }
+        val list = _allSongs.value
+        val index = list.indexOfFirst { it.id == song.id }
 
         prefsRepository.incrementPlayCount(song.id)
         prefsRepository.registerRecentlyPlayed(song.id)
 
-        _allSongs.value = _allSongs.value.map { current ->
-            if (current.id == song.id) {
-                current.copy(
-                    playCount = current.playCount + 1
-                )
-            } else {
-                current
+        if (index != -1) {
+            _allSongs.value = list.map { current ->
+                if (current.id == song.id) {
+                    current.copy(
+                        playCount = current.playCount + 1
+                    )
+                } else {
+                    current
+                }
             }
-        }
 
-        val updatedContext = context.map { current ->
-            if (current.id == song.id) {
-                current.copy(
-                    playCount = current.playCount + 1
-                )
-            } else {
-                current
-            }
-        }
-
-        playerManager.setQueue(
-            updatedContext,
-            selectedIndex,
-            autoPlay = true
-        )
-    }
-
-    /*
-     * Reproduce aleatoriamente ÚNICAMENTE el contexto recibido.
-     * No usa songs.random() sobre la biblioteca global.
-     */
-    fun shuffleContext(contextSongs: List<Song>) {
-        val context = contextSongs.distinctBy { it.id }
-        if (context.isEmpty()) return
-
-        val start = context.indices.random()
-
-        playerManager.setQueue(
-            context,
-            start,
-            autoPlay = true
-        )
-
-        if (!playerManager.isShuffleEnabled()) {
-            playerManager.toggleShuffle()
+            playerManager.setQueue(
+                _allSongs.value,
+                _allSongs.value.indexOfFirst { it.id == song.id },
+                autoPlay = true
+            )
+        } else {
+            playerManager.setQueue(listOf(song), 0, autoPlay = true)
         }
     }
 

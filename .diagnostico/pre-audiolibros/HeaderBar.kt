@@ -28,7 +28,6 @@ fun HeaderBar(
     activeTab: String,
     onTabSelected: (String) -> Unit,
     onOpenControlCenter: () -> Unit,
-    shuffleEnabled: Boolean,
     onShuffleAll: () -> Unit
 ) {
     var isSearchOpen by remember { mutableStateOf(false) }
@@ -192,8 +191,7 @@ fun HeaderBar(
             "RECENTLY_ADDED" to "Recientemente añadidas",
             "HISTORY" to "Historial",
             "DOWNLOADED" to "Descargadas",
-            "PODCASTS" to "Podcasts",
-            "AUDIOBOOKS" to "Audiolibros"
+            "PODCASTS" to "Podcasts"
         )
 
         var showMoreTabs by rememberSaveable { mutableStateOf(false) }
@@ -323,8 +321,7 @@ fun HeaderBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = onShuffleAll,
-                enabled = shuffleEnabled
+                onClick = onShuffleAll
             ) {
                 Icon(
                     imageVector = Icons.Default.Shuffle,

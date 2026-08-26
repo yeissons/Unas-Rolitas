@@ -234,20 +234,6 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
 
     var songForInfoDialog by remember { mutableStateOf<Song?>(null) }
 
-    /*
-     * Contexto real que está viendo el usuario en LibraryScreen.
-     *
-     * null = estamos viendo una lista de grupos (Álbumes, Artistas,
-     * Géneros, Carpetas), por lo tanto el aleatorio debe estar
-     * desactivado.
-     *
-     * lista = estamos viendo canciones concretas y el aleatorio
-     * puede actuar exclusivamente sobre esa lista.
-     */
-    var libraryPlaybackContext by remember {
-        mutableStateOf<List<Song>?>(null)
-    }
-
     Scaffold(
         topBar = {
             if (currentRoute == NavRoutes.Library.route) {
@@ -258,10 +244,10 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                     activeTab = activeTab,
                     onTabSelected = { viewModel.setActiveTab(it) },
                     onOpenControlCenter = { navController.navigate(NavRoutes.ControlCenter.route) },
-                    shuffleEnabled = !libraryPlaybackContext.isNullOrEmpty(),
                     onShuffleAll = {
-                        libraryPlaybackContext?.let { context ->
-                            viewModel.shuffleContext(context)
+                        viewModel.toggleShuffle()
+                        if (songs.isNotEmpty()) {
+                            viewModel.playSong(songs.random())
                         }
                     }
                 )
@@ -300,22 +286,13 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                         searchQuery = searchQuery,
                         activeTab = activeTab,
                         onSongSelect = { song ->
-                            val context = libraryPlaybackContext
-
-                            if (!context.isNullOrEmpty()) {
-                                viewModel.playSongInContext(context, song)
-                            } else {
-                                viewModel.playSong(song)
-                            }
+                            viewModel.playSong(song)
                         },
                         onFavoriteToggle = { song ->
                             viewModel.toggleFavorite(song)
                         },
                         onSongMenuClick = { song ->
                             viewModel.setSelectedSongForMenu(song)
-                        },
-                        onPlaybackContextChanged = { context ->
-                            libraryPlaybackContext = context
                         }
                     )
                 }

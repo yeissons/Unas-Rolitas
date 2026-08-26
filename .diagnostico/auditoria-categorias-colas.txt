@@ -1,0 +1,160 @@
+===== AUDITORÍA DE CATEGORÍAS Y COLAS =====
+
+===== FECHA =====
+Wed Aug 26 18:02:04 -05 2026
+
+===== GIT =====
+ M app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt
+ M app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt
+ M app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt
+?? .diagnostico/
+
+===== MUSICVIEWMODEL: FUNCIONES DE REPRODUCCIÓN =====
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:139:    fun songsForTab(tab: String): List<Song> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:315:    fun playSong(song: Song) {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:343:    fun playNextSong(song: Song) {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:347:    fun addSongToQueue(song: Song) {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:375:    fun playQueueIndex(index: Int) {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:386:    fun toggleShuffle() = playerManager.toggleShuffle()
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:228:    fun addSongToQueue(song: Song) {
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:283:    fun toggleShuffle() {
+
+===== MUSICVIEWMODEL: SETQUEUE / COLAS =====
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:39:    private val _activeTab = MutableStateFlow("SONGS")
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:44:    val activeTab: StateFlow<String> = _activeTab.asStateFlow()
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:67:    val isShuffle: StateFlow<Boolean> = playerManager.isShuffle
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:118:                playerManager.setQueue(songs, 0, autoPlay = false)
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:139:    fun songsForTab(tab: String): List<Song> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:311:    fun setActiveTab(tab: String) {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:312:        _activeTab.value = tab
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:333:            playerManager.setQueue(
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:339:            playerManager.setQueue(listOf(song), 0, autoPlay = true)
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:368:        playerManager.setQueue(
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:378:            playerManager.setQueue(q, index)
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:386:    fun toggleShuffle() = playerManager.toggleShuffle()
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:226:    val isShuffle by viewModel.isShuffle.collectAsState()
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:229:    val activeTab by viewModel.activeTab.collectAsState()
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:244:                    activeTab = activeTab,
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:245:                    onTabSelected = { viewModel.setActiveTab(it) },
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:247:                    onShuffleAll = {
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:248:                        viewModel.toggleShuffle()
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:282:                        songs = viewModel.songsForTab(activeTab),
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:287:                        activeTab = activeTab,
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:306:                        isShuffle = isShuffle,
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:314:                        onToggleShuffle = { viewModel.toggleShuffle() },
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:28:    activeTab: String,
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:31:    onShuffleAll: () -> Unit
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:209:                val selected = activeTab == key
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:286:                    val selected = activeTab == key
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:325:                onClick = onShuffleAll
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:328:                    imageVector = Icons.Default.Shuffle,
+app/src/main/java/com/unasrolitas/app/ui/screens/PlayerScreen.kt:38:    isShuffle: Boolean,
+app/src/main/java/com/unasrolitas/app/ui/screens/PlayerScreen.kt:46:    onToggleShuffle: () -> Unit,
+app/src/main/java/com/unasrolitas/app/ui/screens/PlayerScreen.kt:276:            // Shuffle
+app/src/main/java/com/unasrolitas/app/ui/screens/PlayerScreen.kt:277:            IconButton(onClick = onToggleShuffle) {
+app/src/main/java/com/unasrolitas/app/ui/screens/PlayerScreen.kt:279:                    imageVector = Icons.Default.Shuffle,
+app/src/main/java/com/unasrolitas/app/ui/screens/PlayerScreen.kt:281:                    tint = if (isShuffle) OrangePrimary else TextMuted
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:40:    activeTab: String,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:64:        when (activeTab) {
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:57:    private val _isShuffle = MutableStateFlow(false)
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:58:    val isShuffle: StateFlow<Boolean> = _isShuffle.asStateFlow()
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:173:    fun setQueue(songs: List<Song>, startPosition: Int = 0, autoPlay: Boolean = true) {
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:194:            "setQueue size=${songs.size} start=$startPosition autoPlay=$autoPlay"
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:283:    fun toggleShuffle() {
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:284:        val newShuffle = !_isShuffle.value
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:285:        _isShuffle.value = newShuffle
+app/src/main/java/com/unasrolitas/app/player/MusicPlayerManager.kt:286:        _exoPlayer.shuffleModeEnabled = newShuffle
+
+===== LIBRARYSCREEN: AGRUPACIONES =====
+app/src/main/java/com/unasrolitas/app/MainActivity.kt:288:                        onSongSelect = { song ->
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:41:    onSongSelect: (Song) -> Unit,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:93:                                    match?.let(onSongSelect)
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:102:                AlbumLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:106:                    onSongSelect = onSongSelect,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:113:                ArtistLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:117:                    onSongSelect = onSongSelect,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:124:                FolderLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:128:                    onSongSelect = onSongSelect,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:135:                GenreLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:139:                    onSongSelect = onSongSelect,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:146:                AudiobookLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:150:                    onSongSelect = onSongSelect,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:168:                        onSongSelect = onSongSelect,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:187:                        onSongSelect = onSongSelect,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:203:    onSongSelect: (Song) -> Unit,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:240:                onClick = { onSongSelect(song) },
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:249:private fun AudiobookLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:253:    onSongSelect: (Song) -> Unit,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:312:                    onClick = { onSongSelect(song) },
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:322:private fun AlbumLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:326:    onSongSelect: (Song) -> Unit,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:332:            .groupBy { "${it.album.trim()}|${it.artist.trim()}" }
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:356:                GroupRowItem(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:359:                    onClick = { onSongSelect(album.song) }
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:367:private fun ArtistLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:371:    onSongSelect: (Song) -> Unit,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:377:            .groupBy {
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:403:                GroupRowItem(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:406:                    onClick = { onSongSelect(artist.song) }
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:414:private fun GenreLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:418:    onSongSelect: (Song) -> Unit,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:424:            .groupBy {
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:452:                GroupRowItem(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:455:                    onClick = { onSongSelect(genre.song) }
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:463:private fun FolderLibraryView(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:467:    onSongSelect: (Song) -> Unit,
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:473:            .groupBy { song ->
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:499:                GroupRowItem(
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:502:                    onClick = { onSongSelect(folder.song) }
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:537:private fun GroupRowItem(
+app/src/main/java/com/unasrolitas/app/data/repository/MediaStoreRepository.kt:117:        songs.groupBy { it.album }
+
+===== PESTAÑAS =====
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:39:    private val _activeTab = MutableStateFlow("SONGS")
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:143:            "SONGS" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:147:            "ALBUMS" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:160:            "ARTISTS" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:173:            "FOLDERS" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:183:            "PLAYLISTS" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:187:            "GENRES" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:199:            "FAVORITES" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:205:            "MOST_PLAYED" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:212:            "RECENTLY_ADDED" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:216:            "HISTORY" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:224:            "DOWNLOADED" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:239:            "PODCASTS" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:253:            "AUDIOBOOKS" -> {
+app/src/main/java/com/unasrolitas/app/viewmodel/MusicViewModel.kt:271:                        path.contains("audiobooks", ignoreCase = true) ||
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:180:            "SONGS" to "Canciones",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:181:            "ALBUMS" to "Álbumes",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:182:            "ARTISTS" to "Artistas",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:183:            "FAVORITES" to "Favoritos"
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:187:            "PLAYLISTS" to "Listas de reproducción",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:188:            "GENRES" to "Géneros",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:189:            "FOLDERS" to "Carpetas",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:190:            "MOST_PLAYED" to "Más reproducidas",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:191:            "RECENTLY_ADDED" to "Recientemente añadidas",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:192:            "HISTORY" to "Historial",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:193:            "DOWNLOADED" to "Descargadas",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:194:            "PODCASTS" to "Podcasts",
+app/src/main/java/com/unasrolitas/app/ui/components/HeaderBar.kt:195:            "AUDIOBOOKS" to "Audiolibros"
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:66:            "PLAYLISTS" -> {
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:101:            "ALBUMS" -> {
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:112:            "ARTISTS" -> {
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:123:            "FOLDERS" -> {
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:134:            "GENRES" -> {
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:145:            "AUDIOBOOKS" -> {
+app/src/main/java/com/unasrolitas/app/ui/screens/LibraryScreen.kt:156:            "FAVORITES" -> {
+
+===== MUSICPLAYERMANAGER: COLA Y SHUFFLE =====
+122:                val index = _exoPlayer.currentMediaItemIndex
+173:    fun setQueue(songs: List<Song>, startPosition: Int = 0, autoPlay: Boolean = true) {
+194:            "setQueue size=${songs.size} start=$startPosition autoPlay=$autoPlay"
+197:        _exoPlayer.setMediaItems(mediaItems, startPosition, 0L)
+225:        _exoPlayer.addMediaItem(insertIndex, mediaItem)
+246:        _exoPlayer.addMediaItem(mediaItem)
+262:    fun playNext() {
+268:    fun playPrevious() {
+286:        _exoPlayer.shuffleModeEnabled = newShuffle
+
+===== FIN =====

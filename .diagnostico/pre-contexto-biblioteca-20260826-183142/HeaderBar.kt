@@ -28,7 +28,6 @@ fun HeaderBar(
     activeTab: String,
     onTabSelected: (String) -> Unit,
     onOpenControlCenter: () -> Unit,
-    shuffleEnabled: Boolean,
     onShuffleAll: () -> Unit
 ) {
     var isSearchOpen by remember { mutableStateOf(false) }
@@ -323,8 +322,7 @@ fun HeaderBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = onShuffleAll,
-                enabled = shuffleEnabled
+                onClick = onShuffleAll
             ) {
                 Icon(
                     imageVector = Icons.Default.Shuffle,

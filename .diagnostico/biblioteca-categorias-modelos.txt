@@ -1,3 +1,285 @@
+===== SONG MODEL =====
+package com.unasrolitas.app.data.model
+
+import android.net.Uri
+
+data class Song(
+    val id: Long,
+    val uri: Uri,
+    val title: String,
+    val artist: String,
+    val album: String,
+    val albumId: Long,
+    val durationMs: Long,
+    val genre: String? = null,
+    val year: Int? = null,
+    val artworkUri: Uri? = null,
+    val mimeType: String? = "audio/mpeg",
+    val bitrateKbps: Int? = null,
+    val sampleRateHz: Int? = null,
+    val bitDepth: Int? = null,
+    val composer: String? = null,
+    val isFavorite: Boolean = false,
+    val playCount: Int = 0,
+    val sizeBytes: Long = 0L,
+    val filePath: String = ""
+)
+
+===== PLAYLIST MODEL =====
+package com.unasrolitas.app.data.model
+
+import android.net.Uri
+
+data class Playlist(
+    val id: String,
+    val name: String,
+    val description: String,
+    val songIds: List<Long>,
+    val coverUri: Uri? = null,
+    val isSystemPlaylist: Boolean = false
+)
+
+===== MEDIASTORE REPOSITORY =====
+package com.unasrolitas.app.data.repository
+
+import android.content.ContentUris
+import android.content.Context
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import com.unasrolitas.app.data.model.Playlist
+import com.unasrolitas.app.data.model.Song
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class MediaStoreRepository(private val context: Context) {
+
+    private val prefsRepository = PreferencesRepository(context)
+
+    suspend fun getAllSongs(): List<Song> = withContext(Dispatchers.IO) {
+        val songList = mutableListOf<Song>()
+        val favoriteIds = prefsRepository.getFavoriteSongIds()
+
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        }
+
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.ALBUM_ID,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.SIZE,
+            MediaStore.Audio.Media.MIME_TYPE,
+            MediaStore.Audio.Media.YEAR,
+            MediaStore.Audio.Media.GENRE
+        )
+
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        val sortOrder = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
+
+        try {
+            context.contentResolver.query(
+                collection,
+                projection,
+                selection,
+                null,
+                sortOrder
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+                val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+                val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+                val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+                val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+                val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
+                val yearColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
+                val genreColumn = cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
+
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idColumn)
+                    val contentUri = ContentUris.withAppendedId(collection, id)
+                    val albumId = cursor.getLong(albumIdColumn)
+                    val artworkUri = if (albumId > 0) {
+                        ContentUris.withAppendedId(
+                            Uri.parse("content://media/external/audio/albumart"),
+                            albumId
+                        )
+                    } else null
+
+                    songList.add(
+                        Song(
+                            id = id,
+                            uri = contentUri,
+                            title = cursor.getString(titleColumn)?.takeIf { it.isNotBlank() } ?: "Desconocido",
+                            artist = cursor.getString(artistColumn)?.takeIf { it.isNotBlank() } ?: "<Artista Desconocido>",
+                            album = cursor.getString(albumColumn)?.takeIf { it.isNotBlank() } ?: "<Álbum Desconocido>",
+                            albumId = albumId,
+                            durationMs = cursor.getLong(durationColumn).coerceAtLeast(0L),
+                            genre = genreColumn.takeIf { it >= 0 }?.let { cursor.getString(it) },
+                            year = cursor.getInt(yearColumn).takeIf { it > 0 },
+                            artworkUri = artworkUri,
+                            mimeType = cursor.getString(mimeColumn),
+                            sizeBytes = cursor.getLong(sizeColumn).coerceAtLeast(0L),
+                            isFavorite = id in favoriteIds
+                        )
+                    )
+                }
+            }
+        } catch (_: SecurityException) {
+            // Permission is handled by PermissionHandler; return an empty library if revoked.
+        } catch (_: Exception) {
+            // A malformed or unavailable MediaStore entry must not crash the library screen.
+        }
+
+        songList
+    }
+
+    suspend fun getPlaylists(songs: List<Song>): List<Playlist> = withContext(Dispatchers.IO) {
+        if (songs.isEmpty()) return@withContext emptyList()
+
+        val playlists = mutableListOf<Playlist>()
+        val favSongs = songs.filter { it.isFavorite }
+        if (favSongs.isNotEmpty()) {
+            playlists.add(
+                Playlist(
+                    id = "pl_favorites",
+                    name = "Mis Favoritas",
+                    description = "Canciones marcadas con me gusta",
+                    songIds = favSongs.map { it.id }
+                )
+            )
+        }
+
+        songs.groupBy { it.album }
+            .entries
+            .filter { it.key.isNotBlank() && it.key != "<Álbum Desconocido>" }
+            .sortedBy { it.key.lowercase() }
+            .take(5)
+            .forEach { (album, albumSongs) ->
+                playlists.add(
+                    Playlist(
+                        id = "pl_album_${album.hashCode()}",
+                        name = album,
+                        description = "Álbum con ${albumSongs.size} rolitas",
+                        songIds = albumSongs.map { it.id }
+                    )
+                )
+            }
+
+        playlists
+    }
+}
+
+===== MUSIC PLAYER QUEUE METHODS =====
+163-                _currentPositionMs.value = _exoPlayer.currentPosition
+164-                delay(500)
+165-            }
+166-        }
+167-    }
+168-
+169-    private fun stopProgressTracker() {
+170-        progressJob?.cancel()
+171-    }
+172-
+173:    fun setQueue(songs: List<Song>, startPosition: Int = 0, autoPlay: Boolean = true) {
+174-        if (songs.isEmpty()) return
+175-
+176-        _playlist.value = songs
+177-        _currentIndex.value = startPosition
+178-        val mediaItems = songs.map { song ->
+179-            val metadata = MediaMetadata.Builder()
+180-                .setTitle(song.title)
+181-                .setArtist(song.artist)
+182-                .setAlbumTitle(song.album)
+183-                .setArtworkUri(song.artworkUri)
+184-                .build()
+185-
+186-            MediaItem.Builder()
+187-                .setUri(song.uri)
+188-                .setMediaId(song.id.toString())
+189-                .setMediaMetadata(metadata)
+190-                .build()
+191-        }
+192-        AppLogger.i(
+193-            "PLAYER",
+194:            "setQueue size=${songs.size} start=$startPosition autoPlay=$autoPlay"
+195-        )
+196-
+197-        _exoPlayer.setMediaItems(mediaItems, startPosition, 0L)
+198-        _exoPlayer.prepare()
+199-        _exoPlayer.playWhenReady = autoPlay
+200-        if (startPosition in songs.indices) {
+201-            _currentSong.value = songs[startPosition]
+202-            _durationMs.value = songs[startPosition].durationMs
+203-        }
+204-    }
+205-
+206:    fun insertSongAsNext(song: Song) {
+207-        val currentList = _playlist.value.toMutableList()
+208-        val insertIndex = if (currentList.isNotEmpty()) _currentIndex.value + 1 else 0
+209-        currentList.add(insertIndex, song)
+210-        _playlist.value = currentList
+211-
+212-        val metadata = MediaMetadata.Builder()
+213-            .setTitle(song.title)
+214-            .setArtist(song.artist)
+215-            .setAlbumTitle(song.album)
+216-            .setArtworkUri(song.artworkUri)
+217-            .build()
+218-
+219-        val mediaItem = MediaItem.Builder()
+220-            .setUri(song.uri)
+221-            .setMediaId(song.id.toString())
+222-            .setMediaMetadata(metadata)
+223-            .build()
+224-
+225-        _exoPlayer.addMediaItem(insertIndex, mediaItem)
+226-    }
+227-
+228:    fun addSongToQueue(song: Song) {
+229-        val currentList = _playlist.value.toMutableList()
+230-        currentList.add(song)
+231-        _playlist.value = currentList
+232-
+233-        val metadata = MediaMetadata.Builder()
+234-            .setTitle(song.title)
+235-            .setArtist(song.artist)
+236-            .setAlbumTitle(song.album)
+237-            .setArtworkUri(song.artworkUri)
+238-            .build()
+239-
+240-        val mediaItem = MediaItem.Builder()
+241-            .setUri(song.uri)
+242-            .setMediaId(song.id.toString())
+243-            .setMediaMetadata(metadata)
+244-            .build()
+245-
+246-        _exoPlayer.addMediaItem(mediaItem)
+247-    }
+248-
+249-    fun play() {
+250-        AppLogger.i("PLAYER", "play()")
+251-        _exoPlayer.play()
+252-    }
+253-
+254-    fun pause() {
+255-        AppLogger.i("PLAYER", "pause()")
+256-        _exoPlayer.pause()
+257-    }
+258-    fun togglePlay() {
+259-        if (_exoPlayer.isPlaying) pause() else play()
+260-    }
+261-
+262-    fun playNext() {
+263-        if (_exoPlayer.hasNextMediaItem()) {
+
+===== HEADERBAR COMPLETO =====
 package com.unasrolitas.app.ui.components
 
 import androidx.compose.foundation.background
@@ -28,7 +310,8 @@ fun HeaderBar(
     activeTab: String,
     onTabSelected: (String) -> Unit,
     onOpenControlCenter: () -> Unit,
-    shuffleEnabled: Boolean,
+    onOpenEqualizer: () -> Unit,
+    onOpenAudioTools: () -> Unit,
     onShuffleAll: () -> Unit
 ) {
     var isSearchOpen by remember { mutableStateOf(false) }
@@ -173,7 +456,7 @@ fun HeaderBar(
          * Las cuatro categorías más importantes permanecen
          * siempre visibles:
          *
-         * Canciones → Álbumes → Artistas → Favoritos
+         * Canciones → Álbumes → Artistas → Carpetas
          *
          * Las demás categorías se encuentran dentro de "Más >".
          */
@@ -181,19 +464,18 @@ fun HeaderBar(
             "SONGS" to "Canciones",
             "ALBUMS" to "Álbumes",
             "ARTISTS" to "Artistas",
-            "FAVORITES" to "Favoritos"
+            "FOLDERS" to "Carpetas"
         )
 
         val secondaryTabs = listOf(
             "PLAYLISTS" to "Listas de reproducción",
             "GENRES" to "Géneros",
-            "FOLDERS" to "Carpetas",
+            "FAVORITES" to "Favoritos",
             "MOST_PLAYED" to "Más reproducidas",
             "RECENTLY_ADDED" to "Recientemente añadidas",
             "HISTORY" to "Historial",
             "DOWNLOADED" to "Descargadas",
-            "PODCASTS" to "Podcasts",
-            "AUDIOBOOKS" to "Audiolibros"
+            "PODCASTS" to "Podcasts"
         )
 
         var showMoreTabs by rememberSaveable { mutableStateOf(false) }
@@ -323,8 +605,7 @@ fun HeaderBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = onShuffleAll,
-                enabled = shuffleEnabled
+                onClick = onShuffleAll
             ) {
                 Icon(
                     imageVector = Icons.Default.Shuffle,
@@ -345,6 +626,25 @@ fun HeaderBar(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            IconButton(
+                onClick = onOpenEqualizer
+            ) {
+                Icon(
+                    imageVector = Icons.Default.GraphicEq,
+                    contentDescription = "Ecualizador",
+                    tint = TextSecondary
+                )
+            }
+
+            IconButton(
+                onClick = onOpenAudioTools
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = "Herramientas de audio",
+                    tint = TextSecondary
+                )
+            }
         }
 
         HorizontalDivider(
