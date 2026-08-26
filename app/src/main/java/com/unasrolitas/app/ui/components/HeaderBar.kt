@@ -174,7 +174,7 @@ fun HeaderBar(
          * Las cuatro categorías más importantes permanecen
          * siempre visibles:
          *
-         * Canciones → Álbumes → Artistas → Carpetas
+         * Canciones → Álbumes → Artistas → Favoritos
          *
          * Las demás categorías se encuentran dentro de "Más >".
          */
@@ -182,13 +182,13 @@ fun HeaderBar(
             "SONGS" to "Canciones",
             "ALBUMS" to "Álbumes",
             "ARTISTS" to "Artistas",
-            "FOLDERS" to "Carpetas"
+            "FAVORITES" to "Favoritos"
         )
 
         val secondaryTabs = listOf(
             "PLAYLISTS" to "Listas de reproducción",
             "GENRES" to "Géneros",
-            "FAVORITES" to "Favoritos",
+            "FOLDERS" to "Carpetas",
             "MOST_PLAYED" to "Más reproducidas",
             "RECENTLY_ADDED" to "Recientemente añadidas",
             "HISTORY" to "Historial",
