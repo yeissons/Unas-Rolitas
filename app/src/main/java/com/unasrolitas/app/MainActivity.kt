@@ -3,6 +3,7 @@ package com.unasrolitas.app
 import android.Manifest
 import android.app.Application
 import android.content.Intent
+import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
@@ -11,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.media3.session.MediaController
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -28,6 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import com.unasrolitas.app.data.model.Song
 import com.unasrolitas.app.navigation.NavRoutes
 import com.unasrolitas.app.permissions.PermissionHandler
+import com.unasrolitas.app.service.PlaybackService
 import com.unasrolitas.app.ui.components.BottomDockPlayer
 import com.unasrolitas.app.ui.components.ContextMenuBottomSheet
 import com.unasrolitas.app.ui.components.HeaderBar
@@ -39,10 +42,77 @@ import com.unasrolitas.app.ui.theme.TextSecondary
 import com.unasrolitas.app.ui.theme.UnasRolitasTheme
 import com.unasrolitas.app.viewmodel.MusicViewModel
 import com.unasrolitas.app.util.AppLogger
+import androidx.media3.session.SessionToken
 
 class MainActivity : ComponentActivity() {
 
     private var musicViewModel: MusicViewModel? = null
+    private var mediaController: MediaController? = null
+    private var mediaControllerFuture: com.google.common.util.concurrent.ListenableFuture<MediaController>? = null
+
+    private fun connectToPlaybackService() {
+        try {
+            val sessionToken = SessionToken(
+                this,
+                ComponentName(this, PlaybackService::class.java)
+            )
+
+            AppLogger.i(
+                "MEDIA_CONTROLLER",
+                "Conectando MediaController a PlaybackService"
+            )
+
+            mediaControllerFuture =
+                MediaController.Builder(this, sessionToken)
+                    .buildAsync()
+
+            mediaControllerFuture?.addListener(
+                {
+                    try {
+                        mediaController = mediaControllerFuture?.get()
+
+                        AppLogger.i(
+                            "MEDIA_CONTROLLER",
+                            "MediaController conectado correctamente"
+                        )
+                    } catch (e: Exception) {
+                        AppLogger.e(
+                            "MEDIA_CONTROLLER",
+                            "No se pudo conectar MediaController",
+                            e
+                        )
+                    }
+                },
+                ContextCompat.getMainExecutor(this)
+            )
+        } catch (e: Exception) {
+            AppLogger.e(
+                "MEDIA_CONTROLLER",
+                "Error iniciando conexión con PlaybackService",
+                e
+            )
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        connectToPlaybackService()
+    }
+
+    override fun onStop() {
+        AppLogger.i(
+            "MEDIA_CONTROLLER",
+            "MainActivity.onStop"
+        )
+
+        mediaController?.release()
+        mediaController = null
+
+        mediaControllerFuture?.cancel(false)
+        mediaControllerFuture = null
+
+        super.onStop()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
