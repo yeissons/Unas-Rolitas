@@ -44,6 +44,8 @@ fun LibraryScreen(
     onSongSelect: (Song) -> Unit,
     onFavoriteToggle: (Song) -> Unit,
     onSongMenuClick: (Song) -> Unit,
+    onRemoveSongFromPlaylist: ((Playlist, Song) -> Unit)? = null,
+    onDeletePlaylist: ((Playlist) -> Unit)? = null,
     onPlaybackContextChanged: (List<Song>?) -> Unit
 ) {
     val filteredSongs = remember(songs, searchQuery) {
@@ -73,6 +75,17 @@ fun LibraryScreen(
         androidx.compose.runtime.mutableStateOf<LibraryGroup?>(null)
     }
 
+    /*
+     * Playlist seleccionada.
+     *
+     * Las playlists deben comportarse igual que un álbum, artista,
+     * género o carpeta: primero se muestra la agrupación y después
+     * se entra a su contenido.
+     */
+    var selectedPlaylist by remember(activeTab) {
+        androidx.compose.runtime.mutableStateOf<Playlist?>(null)
+    }
+
     val detailSongs = remember(
         filteredSongs,
         selectedGroup,
@@ -81,6 +94,35 @@ fun LibraryScreen(
         selectedGroup?.songs?.let { groupSongs ->
             val ids = groupSongs.map { it.id }.toSet()
             filteredSongs.filter { it.id in ids }
+        }
+    }
+
+    /*
+     * El detalle de una playlist no debe depender del filtro de búsqueda.
+     *
+     * Además, buscamos la playlist actual dentro de la lista recibida
+     * para que las modificaciones realizadas por el ViewModel se reflejen
+     * inmediatamente en pantalla.
+     */
+    val currentSelectedPlaylist = remember(
+        playlists,
+        selectedPlaylist
+    ) {
+        selectedPlaylist?.let { selected ->
+            playlists.firstOrNull { it.id == selected.id }
+        }
+    }
+
+    val playlistDetailSongs = remember(
+        songs,
+        currentSelectedPlaylist
+    ) {
+        currentSelectedPlaylist?.let { playlist ->
+            val songsById = songs.associateBy { it.id }
+
+            playlist.songIds.mapNotNull { songId ->
+                songsById[songId]
+            }
         }
     }
 
@@ -94,12 +136,19 @@ fun LibraryScreen(
     androidx.compose.runtime.LaunchedEffect(
         activeTab,
         selectedGroup,
+        selectedPlaylist,
         filteredSongs,
-        detailSongs
+        detailSongs,
+        playlistDetailSongs
     ) {
         onPlaybackContextChanged(
             when {
-                selectedGroup != null -> detailSongs ?: emptyList()
+                currentSelectedPlaylist != null ->
+                    playlistDetailSongs ?: emptyList()
+
+                selectedGroup != null ->
+                    detailSongs ?: emptyList()
+
                 activeTab == "SONGS" -> filteredSongs
                 activeTab == "FAVORITES" -> filteredSongs
                 activeTab == "MOST_PLAYED" -> filteredSongs
@@ -108,11 +157,13 @@ fun LibraryScreen(
                 activeTab == "DOWNLOADED" -> filteredSongs
                 activeTab == "PODCASTS" -> filteredSongs
                 activeTab == "AUDIOBOOKS" -> filteredSongs
+
                 activeTab == "PLAYLISTS" -> null
                 activeTab == "ALBUMS" -> null
                 activeTab == "ARTISTS" -> null
                 activeTab == "GENRES" -> null
                 activeTab == "FOLDERS" -> null
+
                 else -> filteredSongs
             }
         )
@@ -123,7 +174,76 @@ fun LibraryScreen(
             .fillMaxSize()
             .background(DarkCanvas)
     ) {
-        if (selectedGroup != null) {
+        if (currentSelectedPlaylist != null) {
+            val playlist = currentSelectedPlaylist
+            val songsInPlaylist = playlistDetailSongs ?: emptyList()
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 14.dp,
+                        vertical = 8.dp
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        selectedPlaylist = null
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Volver",
+                        tint = Color.White
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = playlist.name,
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+
+                    Text(
+                        text = "${songsInPlaylist.size} rolitas",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            if (songsInPlaylist.isEmpty()) {
+                EmptyStateView(
+                    icon = Icons.Default.QueueMusic,
+                    title = "Playlist vacía",
+                    subtitle = "Añade canciones a esta playlist para reproducirlas."
+                )
+            } else {
+                SongListView(
+                    songs = songsInPlaylist,
+                    currentSong = currentSong,
+                    isPlaying = isPlaying,
+                    onSongSelect = onSongSelect,
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSongMenuClick = onSongMenuClick,
+                    onRemoveSong = if (onRemoveSongFromPlaylist != null) {
+                        { song ->
+                            onRemoveSongFromPlaylist(playlist, song)
+                        }
+                    } else {
+                        null
+                    },
+                    showHeader = true
+                )
+            }
+        } else if (selectedGroup != null) {
             val group = selectedGroup!!
             val songsInGroup = detailSongs ?: emptyList()
 
@@ -228,14 +348,17 @@ fun LibraryScreen(
                                     playlist = playlist,
                                     songs = songs,
                                     onClick = {
-                                        val playlistSongs = playlist.songIds.mapNotNull { id ->
-                                            songs.find { it.id == id }
+                                        selectedPlaylist = playlist
+                                    },
+                                    onDelete = if (
+                                        !playlist.isSystemPlaylist &&
+                                        onDeletePlaylist != null
+                                    ) {
+                                        {
+                                            onDeletePlaylist(playlist)
                                         }
-
-                                        if (playlistSongs.isNotEmpty()) {
-                                            onPlaybackContextChanged(playlistSongs)
-                                            onSongSelect(playlistSongs.first())
-                                        }
+                                    } else {
+                                        null
                                     }
                                 )
                             }
@@ -333,6 +456,7 @@ private fun SongListView(
     onSongSelect: (Song) -> Unit,
     onFavoriteToggle: (Song) -> Unit,
     onSongMenuClick: (Song) -> Unit,
+    onRemoveSong: ((Song) -> Unit)? = null,
     showHeader: Boolean = false
 ) {
     LazyColumn(
@@ -369,7 +493,10 @@ private fun SongListView(
                 isPlaying = isPlaying,
                 onClick = { onSongSelect(song) },
                 onFavoriteToggle = { onFavoriteToggle(song) },
-                onMenuClick = { onSongMenuClick(song) }
+                onMenuClick = { onSongMenuClick(song) },
+                onRemoveSong = onRemoveSong?.let {
+                    { it(song) }
+                }
             )
         }
     }
@@ -729,7 +856,8 @@ private fun GroupRowItem(
 fun PlaylistCardItem(
     playlist: Playlist,
     songs: List<Song>,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     val coverSong = playlist.songIds
         .asSequence()
@@ -768,6 +896,22 @@ fun PlaylistCardItem(
                         tint = OrangePrimary,
                         modifier = Modifier.size(48.dp)
                     )
+                }
+
+                if (onDelete != null) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Eliminar playlist",
+                            tint = Color.White
+                        )
+                    }
                 }
             }
 

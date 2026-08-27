@@ -25,6 +25,7 @@ fun ContextMenuBottomSheet(
     onPlayNow: (Song) -> Unit,
     onPlayNext: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
+    onAddToPlaylist: (Song) -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onShowInfo: (Song) -> Unit
 ) {
@@ -90,6 +91,16 @@ fun ContextMenuBottomSheet(
                 color = Color.White,
                 onClick = {
                     onAddToQueue(song)
+                    onDismiss()
+                }
+            )
+
+            ContextOptionRow(
+                icon = Icons.Default.LibraryMusic,
+                title = "Añadir a una playlist",
+                color = Color.White,
+                onClick = {
+                    onAddToPlaylist(song)
                     onDismiss()
                 }
             )

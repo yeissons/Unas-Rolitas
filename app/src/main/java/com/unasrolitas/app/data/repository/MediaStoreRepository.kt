@@ -98,38 +98,49 @@ class MediaStoreRepository(private val context: Context) {
         songList
     }
 
-    suspend fun getPlaylists(songs: List<Song>): List<Playlist> = withContext(Dispatchers.IO) {
-        if (songs.isEmpty()) return@withContext emptyList()
+    suspend fun getPlaylists(songs: List<Song>): List<Playlist> =
+        withContext(Dispatchers.IO) {
+            if (songs.isEmpty()) return@withContext emptyList()
 
-        val playlists = mutableListOf<Playlist>()
-        val favSongs = songs.filter { it.isFavorite }
-        if (favSongs.isNotEmpty()) {
-            playlists.add(
-                Playlist(
-                    id = "pl_favorites",
-                    name = "Mis Favoritas",
-                    description = "Canciones marcadas con me gusta",
-                    songIds = favSongs.map { it.id }
-                )
-            )
-        }
+            // Las playlists mostradas por la biblioteca deben representar
+            // agrupaciones reales y reproducibles, no listas ficticias.
+            val playlists = mutableListOf<Playlist>()
 
-        songs.groupBy { it.album }
-            .entries
-            .filter { it.key.isNotBlank() && it.key != "<Álbum Desconocido>" }
-            .sortedBy { it.key.lowercase() }
-            .take(5)
-            .forEach { (album, albumSongs) ->
+            val favoriteSongs = songs.filter { it.isFavorite }
+            if (favoriteSongs.isNotEmpty()) {
                 playlists.add(
                     Playlist(
-                        id = "pl_album_${album.hashCode()}",
-                        name = album,
-                        description = "Álbum con ${albumSongs.size} rolitas",
-                        songIds = albumSongs.map { it.id }
+                        id = "pl_favorites",
+                        name = "Mis Favoritas",
+                        description = "Canciones marcadas con me gusta",
+                        songIds = favoriteSongs.map { it.id },
+                        isSystemPlaylist = true
                     )
                 )
             }
 
-        playlists
-    }
+            songs.groupBy { it.album.trim() }
+                .filterKeys {
+                    it.isNotBlank() && !it.equals(
+                        "<Álbum Desconocido>",
+                        ignoreCase = true
+                    )
+                }
+                .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+                .forEach { (album, albumSongs) ->
+                    playlists.add(
+                        Playlist(
+                            id = "pl_album_${album.hashCode()}",
+                            name = album,
+                            description = "Álbum con ${albumSongs.size} rolitas",
+                            songIds = albumSongs
+                                .sortedBy { it.title.trim().lowercase() }
+                                .map { it.id },
+                            isSystemPlaylist = true
+                        )
+                    )
+                }
+
+            playlists
+        }
 }

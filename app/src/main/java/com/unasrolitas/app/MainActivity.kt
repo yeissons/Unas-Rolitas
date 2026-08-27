@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.unasrolitas.app.data.model.Song
+import com.unasrolitas.app.data.model.Playlist
 import com.unasrolitas.app.navigation.NavRoutes
 import com.unasrolitas.app.permissions.PermissionHandler
 import com.unasrolitas.app.service.PlaybackService
@@ -233,6 +235,10 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
     val selectedSongForMenu by viewModel.selectedSongForMenu.collectAsState()
 
     var songForInfoDialog by remember { mutableStateOf<Song?>(null) }
+    var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    var playlistForDeleteDialog by remember { mutableStateOf<Playlist?>(null) }
+
 
     /*
      * Contexto real que está viendo el usuario en LibraryScreen.
@@ -313,6 +319,15 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                         },
                         onSongMenuClick = { song ->
                             viewModel.setSelectedSongForMenu(song)
+                        },
+                        onRemoveSongFromPlaylist = { playlist, song ->
+                            viewModel.removeSongFromPlaylist(
+                                playlist.id,
+                                song
+                            )
+                        },
+                        onDeletePlaylist = { playlist ->
+                            playlistForDeleteDialog = playlist
                         },
                         onPlaybackContextChanged = { context ->
                             libraryPlaybackContext = context
@@ -401,8 +416,261 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                     onPlayNow = { song -> viewModel.playSong(song) },
                     onPlayNext = { song -> viewModel.playNextSong(song) },
                     onAddToQueue = { song -> viewModel.addSongToQueue(song) },
+                    onAddToPlaylist = { song ->
+                        songForPlaylistDialog = song
+                    },
+
                     onToggleFavorite = { song -> viewModel.toggleFavorite(song) },
                     onShowInfo = { song -> songForInfoDialog = song }
+                )
+            }
+
+            // Selector de playlist
+            if (songForPlaylistDialog != null) {
+                val song = songForPlaylistDialog!!
+
+                AlertDialog(
+                    onDismissRequest = {
+                        songForPlaylistDialog = null
+                    },
+                    containerColor = DarkCard,
+                    title = {
+                        Text(
+                            text = "Añadir a playlist",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    },
+                    text = {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val userPlaylists =
+                                playlists.filter { !it.isSystemPlaylist }
+
+                            if (userPlaylists.isEmpty()) {
+                                Text(
+                                    text = "No tienes playlists creadas.",
+                                    color = TextSecondary
+                                )
+                            } else {
+                                userPlaylists.forEach { playlist ->
+                                    Surface(
+                                        onClick = {
+                                            viewModel.addSongToPlaylist(
+                                                playlist.id,
+                                                song
+                                            )
+                                            songForPlaylistDialog = null
+                                        },
+                                        color = Color.Transparent,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.QueueMusic,
+                                                contentDescription = null,
+                                                tint = OrangePrimary
+                                            )
+
+                                            Spacer(
+                                                modifier = Modifier.width(12.dp)
+                                            )
+
+                                            Column {
+                                                Text(
+                                                    text = playlist.name,
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+
+                                                Text(
+                                                    text = "${playlist.songIds.size} rolitas",
+                                                    color = TextSecondary,
+                                                    fontSize = 12.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showCreatePlaylistDialog = true
+                            }
+                        ) {
+                            Text(
+                                text = "Nueva playlist",
+                                color = OrangePrimary
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                songForPlaylistDialog = null
+                            }
+                        ) {
+                            Text(
+                                text = "Cancelar",
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                )
+            }
+
+            // Crear playlist
+            if (showCreatePlaylistDialog) {
+                var playlistName by remember {
+                    mutableStateOf("")
+                }
+                var playlistError by remember {
+                    mutableStateOf<String?>(null)
+                }
+
+                AlertDialog(
+                    onDismissRequest = {
+                        showCreatePlaylistDialog = false
+                    },
+                    containerColor = DarkCard,
+                    title = {
+                        Text(
+                            text = "Nueva playlist",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    },
+                    text = {
+                        Column {
+                            OutlinedTextField(
+                                value = playlistName,
+                                onValueChange = {
+                                    playlistName = it
+                                    playlistError = null
+                                },
+                                singleLine = true,
+                                label = {
+                                    Text("Nombre")
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            if (playlistError != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = playlistError!!,
+                                    color = Color.Red,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val created =
+                                    viewModel.createPlaylist(playlistName)
+
+                                if (created == null) {
+                                    playlistError =
+                                        if (playlistName.trim().isBlank()) {
+                                            "Escribe un nombre para la playlist."
+                                        } else {
+                                            "Ya existe una playlist con ese nombre."
+                                        }
+                                } else {
+                                    val song = songForPlaylistDialog
+
+                                    if (song != null) {
+                                        viewModel.addSongToPlaylist(
+                                            created.id,
+                                            song
+                                        )
+                                    }
+
+                                    songForPlaylistDialog = null
+                                    showCreatePlaylistDialog = false
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = "Crear",
+                                color = OrangePrimary
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                showCreatePlaylistDialog = false
+                            }
+                        ) {
+                            Text(
+                                text = "Cancelar",
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                )
+            }
+
+            // Confirmar eliminación de playlist
+            if (playlistForDeleteDialog != null) {
+                val playlist = playlistForDeleteDialog!!
+
+                AlertDialog(
+                    onDismissRequest = {
+                        playlistForDeleteDialog = null
+                    },
+                    containerColor = DarkCard,
+                    title = {
+                        Text(
+                            text = "Eliminar playlist",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "¿Quieres eliminar la playlist \"${playlist.name}\"? Las canciones no se eliminarán de tu biblioteca.",
+                            color = TextSecondary
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.deletePlaylist(playlist.id)
+                                playlistForDeleteDialog = null
+                            }
+                        ) {
+                            Text(
+                                text = "Eliminar",
+                                color = Color.Red
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                playlistForDeleteDialog = null
+                            }
+                        ) {
+                            Text(
+                                text = "Cancelar",
+                                color = TextSecondary
+                            )
+                        }
+                    }
                 )
             }
 

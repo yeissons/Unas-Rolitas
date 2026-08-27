@@ -112,7 +112,9 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             _allSongs.value = songs
-            _playlists.value = mediaStoreRepository.getPlaylists(songs)
+            val generatedPlaylists = mediaStoreRepository.getPlaylists(songs)
+            val userPlaylists = prefsRepository.getUserPlaylists()
+            _playlists.value = generatedPlaylists + userPlaylists
 
             if (playerManager.playlist.value.isEmpty() && songs.isNotEmpty()) {
                 playerManager.setQueue(songs, 0, autoPlay = false)
@@ -439,8 +441,54 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         }
         _allSongs.value = updated
         viewModelScope.launch {
-            _playlists.value = mediaStoreRepository.getPlaylists(updated)
+            val generated = mediaStoreRepository.getPlaylists(updated)
+            _playlists.value = generated + prefsRepository.getUserPlaylists()
         }
+    }
+
+    fun createPlaylist(name: String): Playlist? {
+        val playlist = prefsRepository.createPlaylist(name) ?: return null
+        _playlists.value = _playlists.value + playlist
+        return playlist
+    }
+
+    fun addSongToPlaylist(playlistId: String, song: Song): Boolean {
+        val added = prefsRepository.addSongToPlaylist(playlistId, song.id)
+        if (added) {
+            _playlists.value = _playlists.value.map { playlist ->
+                if (playlist.id == playlistId &&
+                    !playlist.isSystemPlaylist &&
+                    song.id !in playlist.songIds
+                ) {
+                    playlist.copy(songIds = playlist.songIds + song.id)
+                } else {
+                    playlist
+                }
+            }
+        }
+        return added
+    }
+
+    fun removeSongFromPlaylist(playlistId: String, song: Song): Boolean {
+        val removed = prefsRepository.removeSongFromPlaylist(playlistId, song.id)
+        if (removed) {
+            _playlists.value = _playlists.value.map { playlist ->
+                if (playlist.id == playlistId && !playlist.isSystemPlaylist) {
+                    playlist.copy(songIds = playlist.songIds.filterNot { it == song.id })
+                } else {
+                    playlist
+                }
+            }
+        }
+        return removed
+    }
+
+    fun deletePlaylist(playlistId: String): Boolean {
+        val deleted = prefsRepository.deletePlaylist(playlistId)
+        if (deleted) {
+            _playlists.value = _playlists.value.filterNot { it.id == playlistId }
+        }
+        return deleted
     }
 
     fun setSelectedSongForMenu(song: Song?) {

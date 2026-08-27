@@ -29,7 +29,8 @@ fun SongRowItem(
     isPlaying: Boolean,
     onClick: () -> Unit,
     onFavoriteToggle: () -> Unit,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onRemoveSong: (() -> Unit)? = null
 ) {
     Surface(
         color = if (isCurrentSong) DarkCard else DarkSurface,
@@ -156,6 +157,20 @@ fun SongRowItem(
                     tint = TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
+            }
+
+            if (onRemoveSong != null) {
+                IconButton(
+                    onClick = onRemoveSong,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Quitar de esta playlist",
+                        tint = TextMuted,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
