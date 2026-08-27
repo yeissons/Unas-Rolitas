@@ -55,6 +55,7 @@ class MediaStoreRepository(private val context: Context) {
                 val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
                 val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                 val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+                val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
                 val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
                 val yearColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
                 val genreColumn = cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
@@ -84,6 +85,7 @@ class MediaStoreRepository(private val context: Context) {
                             artworkUri = artworkUri,
                             mimeType = cursor.getString(mimeColumn),
                             sizeBytes = cursor.getLong(sizeColumn).coerceAtLeast(0L),
+                            dateModified = cursor.getLong(dateModifiedColumn).coerceAtLeast(0L),
                             isFavorite = id in favoriteIds
                         )
                     )

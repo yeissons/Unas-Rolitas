@@ -43,11 +43,9 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         ARTIST,
         ALBUM,
         GENRE,
-        DATE_ADDED,
-        DATE_MODIFIED,
+        DATE,
         DURATION,
         FILE_SIZE,
-        PLAY_COUNT,
         CUSTOM
     }
 
@@ -165,96 +163,128 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-    private fun applySortMode(songs: List<Song>): List<Song> {
-        val sorted = when (_sortMode.value) {
-            SortMode.TITLE ->
-                songs.sortedBy { it.title.trim().lowercase() }
+    private fun sortSongsContextually(
+        songs: List<Song>,
+        tab: String
+    ): List<Song> {
+        val sorted = when (tab) {
 
-            SortMode.ARTIST ->
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.artist.trim().lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-
-            SortMode.ALBUM ->
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.album.trim().lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-
-            SortMode.GENRE ->
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.genre.orEmpty().trim().lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-
-            SortMode.DATE_ADDED ->
-                songs.sortedByDescending { it.id }
-
-            SortMode.DATE_MODIFIED ->
-                songs.sortedByDescending { it.id }
-
-            SortMode.DURATION ->
-                songs.sortedBy { it.durationMs }
-
-            SortMode.FILE_SIZE ->
-                songs.sortedBy { it.filePath.length }
-
-            SortMode.PLAY_COUNT ->
-                songs.sortedByDescending { it.playCount }
-
-            SortMode.CUSTOM ->
-                songs
-        }
-
-        return if (_sortDescending.value) {
-            sorted.asReversed()
-        } else {
-            sorted
-        }
-    }
-
-    fun songsForTab(tab: String): List<Song> {
-        val songs = _allSongs.value
-
-        return applySortMode(when (tab) {
             "SONGS" -> {
-                songs.sortedBy { it.title.trim().lowercase() }
+                when (_sortMode.value) {
+                    SortMode.TITLE ->
+                        songs.sortedBy { it.title.trim().lowercase() }
+
+                    SortMode.ARTIST ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.artist.trim()
+                                    .ifBlank { "Artista desconocido" }
+                                    .lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    SortMode.ALBUM ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.album.trim()
+                                    .ifBlank { "Álbum desconocido" }
+                                    .lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    SortMode.GENRE ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.genre?.trim()
+                                    .takeUnless { value -> value.isNullOrBlank() }
+                                    ?: "Sin género"
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
+
+                    SortMode.CUSTOM ->
+                        songs
+
+                }
             }
 
             "ALBUMS" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.album.trim().ifBlank { "Álbum desconocido" }
-                            .lowercase()
-                    }.thenBy {
-                        it.artist.trim().lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
+                when (_sortMode.value) {
+                    SortMode.ALBUM ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.album.trim()
+                                    .ifBlank { "Álbum desconocido" }
+                                    .lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    SortMode.ARTIST ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.artist.trim()
+                                    .ifBlank { "Artista desconocido" }
+                                    .lowercase()
+                            }.thenBy {
+                                it.album.trim().lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    else ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.album.trim()
+                                    .ifBlank { "Álbum desconocido" }
+                                    .lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+                }
             }
 
             "ARTISTS" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.artist.trim().ifBlank { "Artista desconocido" }
-                            .lowercase()
-                    }.thenBy {
-                        it.album.trim().lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
+                when (_sortMode.value) {
+                    SortMode.ARTIST ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.artist.trim()
+                                    .ifBlank { "Artista desconocido" }
+                                    .lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    else ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.artist.trim()
+                                    .ifBlank { "Artista desconocido" }
+                                    .lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+                }
             }
 
             "FOLDERS" -> {
@@ -265,10 +295,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                         it.title.trim().lowercase()
                     }
                 )
-            }
-
-            "PLAYLISTS" -> {
-                songs
             }
 
             "GENRES" -> {
@@ -284,9 +310,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             "FAVORITES" -> {
-                songs
-                    .filter { it.isFavorite }
-                    .sortedBy { it.title.trim().lowercase() }
+                songs.sortedBy { it.title.trim().lowercase() }
             }
 
             "MOST_PLAYED" -> {
@@ -301,7 +325,84 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             "HISTORY" -> {
-                val byId = songs.associateBy { it.id }
+                songs
+            }
+
+            "DOWNLOADED" -> {
+                songs.sortedBy { it.title.trim().lowercase() }
+            }
+
+            "PODCASTS" -> {
+                songs.sortedBy { it.title.trim().lowercase() }
+            }
+
+            "AUDIOBOOKS" -> {
+                songs.sortedWith(
+                    compareBy<Song> {
+                        it.album.trim().lowercase()
+                    }.thenBy {
+                        it.title.trim().lowercase()
+                    }
+                )
+            }
+
+            "PLAYLISTS" -> {
+                songs
+            }
+
+            else -> {
+                songs.sortedBy { it.title.trim().lowercase() }
+            }
+        }
+
+        return if (_sortDescending.value) {
+            sorted.asReversed()
+        } else {
+            sorted
+        }
+    }
+
+    fun songsForTab(tab: String): List<Song> {
+        val songs = when (tab) {
+
+            "SONGS" -> {
+                _allSongs.value
+            }
+
+            "ALBUMS" -> {
+                _allSongs.value
+            }
+
+            "ARTISTS" -> {
+                _allSongs.value
+            }
+
+            "FOLDERS" -> {
+                _allSongs.value
+            }
+
+            "PLAYLISTS" -> {
+                _allSongs.value
+            }
+
+            "GENRES" -> {
+                _allSongs.value
+            }
+
+            "FAVORITES" -> {
+                _allSongs.value.filter { it.isFavorite }
+            }
+
+            "MOST_PLAYED" -> {
+                _allSongs.value
+            }
+
+            "RECENTLY_ADDED" -> {
+                _allSongs.value
+            }
+
+            "HISTORY" -> {
+                val byId = _allSongs.value.associateBy { it.id }
 
                 prefsRepository
                     .getRecentlyPlayed()
@@ -309,69 +410,59 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             "DOWNLOADED" -> {
-                songs
-                    .filter { song ->
-                        song.filePath.contains(
-                            "/Download/",
-                            ignoreCase = true
-                        ) ||
-                        song.filePath.contains(
-                            "/Downloads/",
-                            ignoreCase = true
-                        )
-                    }
-                    .sortedBy { it.title.trim().lowercase() }
+                _allSongs.value.filter { song ->
+                    song.filePath.contains(
+                        "/Download/",
+                        ignoreCase = true
+                    ) ||
+                    song.filePath.contains(
+                        "/Downloads/",
+                        ignoreCase = true
+                    )
+                }
             }
 
             "PODCASTS" -> {
-                songs
-                    .filter { song ->
-                        val title = song.title
-                        val album = song.album
-                        val genre = song.genre.orEmpty()
+                _allSongs.value.filter { song ->
+                    val title = song.title
+                    val album = song.album
+                    val genre = song.genre.orEmpty()
 
-                        title.contains("podcast", ignoreCase = true) ||
-                        album.contains("podcast", ignoreCase = true) ||
-                        genre.contains("podcast", ignoreCase = true)
-                    }
-                    .sortedBy { it.title.trim().lowercase() }
+                    title.contains("podcast", ignoreCase = true) ||
+                    album.contains("podcast", ignoreCase = true) ||
+                    genre.contains("podcast", ignoreCase = true)
+                }
             }
 
             "AUDIOBOOKS" -> {
-                songs
-                    .filter { song ->
-                        val title = song.title
-                        val artist = song.artist
-                        val album = song.album
-                        val genre = song.genre.orEmpty()
-                        val path = song.filePath
+                _allSongs.value.filter { song ->
+                    val title = song.title
+                    val artist = song.artist
+                    val album = song.album
+                    val genre = song.genre.orEmpty()
+                    val path = song.filePath
 
-                        title.contains("audiolibro", ignoreCase = true) ||
-                        title.contains("audiobook", ignoreCase = true) ||
-                        artist.contains("audiolibro", ignoreCase = true) ||
-                        artist.contains("audiobook", ignoreCase = true) ||
-                        album.contains("audiolibro", ignoreCase = true) ||
-                        album.contains("audiobook", ignoreCase = true) ||
-                        genre.contains("audiolibro", ignoreCase = true) ||
-                        genre.contains("audiobook", ignoreCase = true) ||
-                        path.contains("audiolibro", ignoreCase = true) ||
-                        path.contains("audiobooks", ignoreCase = true) ||
-                        path.contains("/books/", ignoreCase = true) ||
-                        path.contains("/book/", ignoreCase = true)
-                    }
-                    .sortedWith(
-                        compareBy<Song> {
-                            it.album.trim().lowercase()
-                        }.thenBy {
-                            it.title.trim().lowercase()
-                        }
-                    )
+                    title.contains("audiolibro", ignoreCase = true) ||
+                    title.contains("audiobook", ignoreCase = true) ||
+                    artist.contains("audiolibro", ignoreCase = true) ||
+                    artist.contains("audiobook", ignoreCase = true) ||
+                    album.contains("audiolibro", ignoreCase = true) ||
+                    album.contains("audiobook", ignoreCase = true) ||
+                    genre.contains("audiolibro", ignoreCase = true) ||
+                    genre.contains("audiobook", ignoreCase = true) ||
+                    path.contains("audiolibro", ignoreCase = true) ||
+                    path.contains("audiobooks", ignoreCase = true) ||
+                    path.contains("/books/", ignoreCase = true) ||
+                    path.contains("/book/", ignoreCase = true)
+                }
             }
 
             else -> {
-                songs.sortedBy { it.title.trim().lowercase() }
+                _allSongs.value
             }
-        })
+        }
+
+        return sortSongsContextually(songs, tab)
     }
 
     private fun folderNameForLibrary(path: String): String {

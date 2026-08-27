@@ -21,5 +21,6 @@ data class Song(
     val isFavorite: Boolean = false,
     val playCount: Int = 0,
     val sizeBytes: Long = 0L,
+    val dateModified: Long = 0L,
     val filePath: String = ""
 )
