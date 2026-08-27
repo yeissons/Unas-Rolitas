@@ -126,7 +126,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
 
-        var showSortMenu by rememberSaveable { mutableStateOf(false) }
+
             UnasRolitasTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -166,6 +166,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun UnasRolitasMainContent(viewModel: MusicViewModel) {
+    var showSortMenu by rememberSaveable { mutableStateOf(false) }
+
     val navController = rememberNavController()
 
     val notificationPermissionLauncher =
