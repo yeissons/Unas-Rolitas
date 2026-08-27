@@ -1,6 +1,0 @@
- .../main/java/com/unasrolitas/app/MainActivity.kt  |  31 +-
- .../unasrolitas/app/player/MusicPlayerManager.kt   |   2 +
- .../com/unasrolitas/app/ui/components/HeaderBar.kt |   7 +-
- .../unasrolitas/app/ui/screens/LibraryScreen.kt    | 454 +++++++++++++++------
- .../unasrolitas/app/viewmodel/MusicViewModel.kt    | 119 +++++-
- 5 files changed, 464 insertions(+), 149 deletions(-)
