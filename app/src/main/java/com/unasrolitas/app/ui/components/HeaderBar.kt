@@ -29,7 +29,8 @@ fun HeaderBar(
     onTabSelected: (String) -> Unit,
     onOpenControlCenter: () -> Unit,
     shuffleEnabled: Boolean,
-    onShuffleAll: () -> Unit
+    onShuffleAll: () -> Unit,
+    onSortClick: () -> Unit
 ) {
     var isSearchOpen by remember { mutableStateOf(false) }
 
@@ -168,14 +169,14 @@ fun HeaderBar(
         }
 
         /*
-         * CATEGORÍAS PRINCIPALES
+         * CATEGORÍAS DE LA BIBLIOTECA
          *
-         * Las cuatro categorías más importantes permanecen
-         * siempre visibles:
-         *
+         * Siempre visibles:
          * Canciones → Álbumes → Artistas → Favoritos
          *
-         * Las demás categorías se encuentran dentro de "Más >".
+         * La quinta posición NO es una pestaña.
+         * Es únicamente una flecha que despliega las demás categorías
+         * horizontalmente hacia la derecha, en la misma fila.
          */
         val primaryTabs = listOf(
             "SONGS" to "Canciones",
@@ -210,7 +211,10 @@ fun HeaderBar(
                 val selected = activeTab == key
 
                 Surface(
-                    onClick = { onTabSelected(key) },
+                    onClick = {
+                        onTabSelected(key)
+                        showMoreTabs = false
+                    },
                     color = if (selected) OrangePrimary else DarkCard,
                     shape = RoundedCornerShape(18.dp)
                 ) {
@@ -232,63 +236,50 @@ fun HeaderBar(
                 }
             }
 
-            Surface(
+            /*
+             * Botón de expansión.
+             *
+             * NO es una pestaña:
+             * - no contiene texto
+             * - no usa una pastilla de selección
+             * - solamente muestra la flecha
+             */
+            IconButton(
                 onClick = { showMoreTabs = !showMoreTabs },
-                color = if (showMoreTabs) OrangePrimary else DarkCard,
-                shape = RoundedCornerShape(18.dp)
+                modifier = Modifier.size(40.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(
-                        horizontal = 11.dp,
-                        vertical = 8.dp
-                    ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Más",
-                        color = if (showMoreTabs) Color.White else TextSecondary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Spacer(modifier = Modifier.width(2.dp))
-
-                    Icon(
-                        imageVector = if (showMoreTabs) {
-                            Icons.Default.ExpandLess
-                        } else {
-                            Icons.Default.ChevronRight
-                        },
-                        contentDescription = if (showMoreTabs) {
-                            "Ocultar categorías"
-                        } else {
-                            "Mostrar más categorías"
-                        },
-                        tint = if (showMoreTabs) Color.White else TextSecondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                Icon(
+                    imageVector = if (showMoreTabs) {
+                        Icons.Default.ChevronLeft
+                    } else {
+                        Icons.Default.ChevronRight
+                    },
+                    contentDescription = if (showMoreTabs) {
+                        "Ocultar categorías"
+                    } else {
+                        "Mostrar más categorías"
+                    },
+                    tint = TextSecondary,
+                    modifier = Modifier.size(24.dp)
+                )
             }
-        }
 
-        if (showMoreTabs) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(
-                        start = 14.dp,
-                        end = 14.dp,
-                        top = 7.dp
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            /*
+             * Las categorías secundarias aparecen AQUÍ MISMO,
+             * después de la flecha y en la misma fila.
+             */
+            if (showMoreTabs) {
                 secondaryTabs.forEach { (key, label) ->
                     val selected = activeTab == key
 
                     Surface(
-                        onClick = { onTabSelected(key) },
-                        color = if (selected) OrangePrimary else DarkSurface,
+                        onClick = {
+                            onTabSelected(key)
+                            // Se mantiene expandido al seleccionar
+                            // una categoría secundaria.
+                            showMoreTabs = true
+                        },
+                        color = if (selected) OrangePrimary else DarkCard,
                         shape = RoundedCornerShape(18.dp)
                     ) {
                         Text(
@@ -298,7 +289,7 @@ fun HeaderBar(
                                 vertical = 8.dp
                             ),
                             color = if (selected) Color.White else TextSecondary,
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             fontWeight = if (selected) {
                                 FontWeight.Bold
                             } else {
@@ -344,6 +335,27 @@ fun HeaderBar(
             }
 
             Spacer(modifier = Modifier.weight(1f))
+
+
+            TextButton(
+                onClick = onSortClick
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Sort,
+                    contentDescription = "Ordenar",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                Text(
+                    text = "Ordenar",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
 
         }
 

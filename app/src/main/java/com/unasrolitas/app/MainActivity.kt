@@ -124,6 +124,8 @@ class MainActivity : ComponentActivity() {
         val incomingUri = intent?.data
 
         setContent {
+
+        var showSortMenu by rememberSaveable { mutableStateOf(false) }
             UnasRolitasTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -272,6 +274,10 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                             viewModel.shuffleContext(context)
                         }
                     }
+
+                    onSortClick = {
+                        showSortMenu = true
+                    },
                 )
             }
         },
@@ -300,7 +306,91 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                 startDestination = NavRoutes.Library.route
             ) {
                 composable(NavRoutes.Library.route) {
-                    LibraryScreen(
+
+            if (showSortMenu) {
+                DropdownMenu(
+                    expanded = true,
+                    onDismissRequest = {
+                        showSortMenu = false
+                    }
+                ) {
+                    Text(
+                        text = "Ordenar por",
+                        modifier = Modifier.padding(
+                            horizontal = 16.dp,
+                            vertical = 8.dp
+                        )
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Título") },
+                        onClick = {
+                            viewModel.setSortMode(
+                                MusicViewModel.SortMode.TITLE
+                            )
+                            viewModel.setSortDescending(false)
+                            showSortMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Artista") },
+                        onClick = {
+                            viewModel.setSortMode(
+                                MusicViewModel.SortMode.ARTIST
+                            )
+                            viewModel.setSortDescending(false)
+                            showSortMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Álbum") },
+                        onClick = {
+                            viewModel.setSortMode(
+                                MusicViewModel.SortMode.ALBUM
+                            )
+                            viewModel.setSortDescending(false)
+                            showSortMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Género") },
+                        onClick = {
+                            viewModel.setSortMode(
+                                MusicViewModel.SortMode.GENRE
+                            )
+                            viewModel.setSortDescending(false)
+                            showSortMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Más reproducidas") },
+                        onClick = {
+                            viewModel.setSortMode(
+                                MusicViewModel.SortMode.PLAY_COUNT
+                            )
+                            viewModel.setSortDescending(true)
+                            showSortMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Más recientes") },
+                        onClick = {
+                            viewModel.setSortMode(
+                                MusicViewModel.SortMode.DATE_ADDED
+                            )
+                            viewModel.setSortDescending(true)
+                            showSortMenu = false
+                        }
+                    )
+                }
+            }
+
+LibraryScreen(
                         songs = viewModel.songsForTab(activeTab),
                         playlists = playlists,
                         currentSong = currentSong,

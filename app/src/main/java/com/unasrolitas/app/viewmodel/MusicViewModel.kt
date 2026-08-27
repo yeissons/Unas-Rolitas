@@ -38,6 +38,33 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _activeTab = MutableStateFlow("SONGS")
     // Categorías:
+    enum class SortMode {
+        TITLE,
+        ARTIST,
+        ALBUM,
+        GENRE,
+        DATE_ADDED,
+        DATE_MODIFIED,
+        DURATION,
+        FILE_SIZE,
+        PLAY_COUNT,
+        CUSTOM
+    }
+
+    private val _sortMode = MutableStateFlow(SortMode.TITLE)
+    val sortMode: StateFlow<SortMode> = _sortMode.asStateFlow()
+
+    private val _sortDescending = MutableStateFlow(false)
+    val sortDescending: StateFlow<Boolean> = _sortDescending.asStateFlow()
+
+    fun setSortMode(mode: SortMode) {
+        _sortMode.value = mode
+    }
+
+    fun setSortDescending(descending: Boolean) {
+        _sortDescending.value = descending
+    }
+
     // SONGS, ALBUMS, ARTISTS, FAVORITES, PLAYLISTS, GENRES,
     // FOLDERS, MOST_PLAYED, RECENTLY_ADDED, HISTORY,
     // DOWNLOADED, PODCASTS, AUDIOBOOKS
@@ -138,10 +165,68 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
+    private fun applySortMode(songs: List<Song>): List<Song> {
+        val sorted = when (_sortMode.value) {
+            SortMode.TITLE ->
+                songs.sortedBy { it.title.trim().lowercase() }
+
+            SortMode.ARTIST ->
+                songs.sortedWith(
+                    compareBy<Song> {
+                        it.artist.trim().lowercase()
+                    }.thenBy {
+                        it.title.trim().lowercase()
+                    }
+                )
+
+            SortMode.ALBUM ->
+                songs.sortedWith(
+                    compareBy<Song> {
+                        it.album.trim().lowercase()
+                    }.thenBy {
+                        it.title.trim().lowercase()
+                    }
+                )
+
+            SortMode.GENRE ->
+                songs.sortedWith(
+                    compareBy<Song> {
+                        it.genre.orEmpty().trim().lowercase()
+                    }.thenBy {
+                        it.title.trim().lowercase()
+                    }
+                )
+
+            SortMode.DATE_ADDED ->
+                songs.sortedByDescending { it.id }
+
+            SortMode.DATE_MODIFIED ->
+                songs.sortedByDescending { it.id }
+
+            SortMode.DURATION ->
+                songs.sortedBy { it.durationMs }
+
+            SortMode.FILE_SIZE ->
+                songs.sortedBy { it.filePath.length }
+
+            SortMode.PLAY_COUNT ->
+                songs.sortedByDescending { it.playCount }
+
+            SortMode.CUSTOM ->
+                songs
+        }
+
+        return if (_sortDescending.value) {
+            sorted.asReversed()
+        } else {
+            sorted
+        }
+    }
+
     fun songsForTab(tab: String): List<Song> {
         val songs = _allSongs.value
 
-        return when (tab) {
+        return applySortMode(when (tab) {
             "SONGS" -> {
                 songs.sortedBy { it.title.trim().lowercase() }
             }
@@ -286,7 +371,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             else -> {
                 songs.sortedBy { it.title.trim().lowercase() }
             }
-        }
+        })
     }
 
     private fun folderNameForLibrary(path: String): String {
