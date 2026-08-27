@@ -1,5 +1,10 @@
 package com.unasrolitas.app.ui.components
 
+import com.unasrolitas.app.viewmodel.MusicViewModel
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -30,7 +35,9 @@ fun HeaderBar(
     onOpenControlCenter: () -> Unit,
     shuffleEnabled: Boolean,
     onShuffleAll: () -> Unit,
-    onSortClick: () -> Unit
+    sortMode: MusicViewModel.SortMode,
+    sortDescending: Boolean,
+    onSortSelected: (MusicViewModel.SortMode, Boolean) -> Unit
 ) {
     var isSearchOpen by remember { mutableStateOf(false) }
 
@@ -305,61 +312,323 @@ fun HeaderBar(
         Spacer(modifier = Modifier.height(10.dp))
 
         /*
-         * ACCIONES RÁPIDAS
-         */
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(
-                onClick = onShuffleAll,
-                enabled = shuffleEnabled
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Shuffle,
-                    contentDescription = "Reproducir aleatorio",
-                    tint = OrangePrimary,
-                    modifier = Modifier.size(18.dp)
-                )
+           * ACCIONES RÁPIDAS
+           *
+           * Reproducir aleatorio se habilita únicamente cuando
+           * la vista actual representa canciones concretas.
+           *
+           * Ordenar tiene aquí su propio menú y utiliza directamente
+           * el estado real del ViewModel.
+           */
 
-                Spacer(modifier = Modifier.width(6.dp))
+          Row(
+              modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 14.dp),
+              verticalAlignment = Alignment.CenterVertically
+          ) {
 
-                Text(
-                    text = "Reproducir aleatorio",
-                    color = OrangePrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+              val shuffleColor =
+                  if (shuffleEnabled) {
+                      OrangePrimary
+                  } else {
+                      TextSecondary.copy(alpha = 0.38f)
+                  }
 
-            Spacer(modifier = Modifier.weight(1f))
+              TextButton(
+                  onClick = onShuffleAll,
+                  enabled = shuffleEnabled,
+                  colors = ButtonDefaults.textButtonColors(
+                      contentColor = OrangePrimary,
+                      disabledContentColor = TextSecondary.copy(alpha = 0.38f)
+                  ),
+                  contentPadding = PaddingValues(
+                      horizontal = 10.dp,
+                      vertical = 6.dp
+                  )
+              ) {
+                  Icon(
+                      imageVector = Icons.Default.Shuffle,
+                      contentDescription = if (shuffleEnabled) {
+                          "Reproducir aleatorio"
+                      } else {
+                          "Reproducir aleatorio no disponible en esta vista"
+                      },
+                      tint = shuffleColor,
+                      modifier = Modifier.size(18.dp)
+                  )
 
+                  Spacer(modifier = Modifier.width(6.dp))
 
-            TextButton(
-                onClick = onSortClick
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Sort,
-                    contentDescription = "Ordenar",
-                    tint = TextSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
+                  Text(
+                      text = "Reproducir aleatorio",
+                      color = shuffleColor,
+                      fontSize = 13.sp,
+                      fontWeight = FontWeight.SemiBold
+                  )
+              }
 
-                Spacer(modifier = Modifier.width(6.dp))
+              Spacer(modifier = Modifier.weight(1f))
 
-                Text(
-                    text = "Ordenar",
-                    color = TextSecondary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+              var showSortMenu by rememberSaveable {
+                  mutableStateOf(false)
+              }
 
-        }
+              Box {
+                  TextButton(
+                      onClick = {
+                          showSortMenu = true
+                      },
+                      colors = ButtonDefaults.textButtonColors(
+                          contentColor = TextSecondary
+                      ),
+                      contentPadding = PaddingValues(
+                          horizontal = 10.dp,
+                          vertical = 6.dp
+                      )
+                  ) {
+                      Icon(
+                          imageVector = Icons.Default.Sort,
+                          contentDescription = "Ordenar",
+                          tint = TextSecondary,
+                          modifier = Modifier.size(18.dp)
+                      )
 
-        HorizontalDivider(
+                      Spacer(modifier = Modifier.width(6.dp))
+
+                      Text(
+                          text = "Ordenar",
+                          color = TextSecondary,
+                          fontSize = 13.sp,
+                          fontWeight = FontWeight.SemiBold
+                      )
+                  }
+
+                  DropdownMenu(
+                      expanded = showSortMenu,
+                      onDismissRequest = {
+                          showSortMenu = false
+                      }
+                  ) {
+                      Text(
+                          text = "Ordenar por",
+                          modifier = Modifier.padding(
+                              horizontal = 16.dp,
+                              vertical = 8.dp
+                          ),
+                          color = TextPrimary,
+                          fontWeight = FontWeight.Bold
+                      )
+
+                      DropdownMenuItem(
+                          text = {
+                              Text(
+                                  when {
+                                      sortMode == MusicViewModel.SortMode.TITLE &&
+                                          sortDescending ->
+                                          "✓ Título (Z → A)"
+
+                                      sortMode == MusicViewModel.SortMode.TITLE ->
+                                          "✓ Título (A → Z)"
+
+                                      else ->
+                                          "Título (A → Z)"
+                                  }
+                              )
+                          },
+                          onClick = {
+                              onSortSelected(
+                                  MusicViewModel.SortMode.TITLE,
+                                  if (sortMode == MusicViewModel.SortMode.TITLE) {
+                                      !sortDescending
+                                  } else {
+                                      false
+                                  }
+                              )
+                              showSortMenu = false
+                          }
+                      )
+
+                      DropdownMenuItem(
+                          text = {
+                              Text(
+                                  when {
+                                      sortMode == MusicViewModel.SortMode.ARTIST &&
+                                          sortDescending ->
+                                          "✓ Artista (Z → A)"
+
+                                      sortMode == MusicViewModel.SortMode.ARTIST ->
+                                          "✓ Artista (A → Z)"
+
+                                      else ->
+                                          "Artista (A → Z)"
+                                  }
+                              )
+                          },
+                          onClick = {
+                              onSortSelected(
+                                  MusicViewModel.SortMode.ARTIST,
+                                  if (sortMode == MusicViewModel.SortMode.ARTIST) {
+                                      !sortDescending
+                                  } else {
+                                      false
+                                  }
+                              )
+                              showSortMenu = false
+                          }
+                      )
+
+                      DropdownMenuItem(
+                          text = {
+                              Text(
+                                  when {
+                                      sortMode == MusicViewModel.SortMode.ALBUM &&
+                                          sortDescending ->
+                                          "✓ Álbum (Z → A)"
+
+                                      sortMode == MusicViewModel.SortMode.ALBUM ->
+                                          "✓ Álbum (A → Z)"
+
+                                      else ->
+                                          "Álbum (A → Z)"
+                                  }
+                              )
+                          },
+                          onClick = {
+                              onSortSelected(
+                                  MusicViewModel.SortMode.ALBUM,
+                                  if (sortMode == MusicViewModel.SortMode.ALBUM) {
+                                      !sortDescending
+                                  } else {
+                                      false
+                                  }
+                              )
+                              showSortMenu = false
+                          }
+                      )
+
+                      DropdownMenuItem(
+                          text = {
+                              Text(
+                                  when {
+                                      sortMode == MusicViewModel.SortMode.GENRE &&
+                                          sortDescending ->
+                                          "✓ Género (Z → A)"
+
+                                      sortMode == MusicViewModel.SortMode.GENRE ->
+                                          "✓ Género (A → Z)"
+
+                                      else ->
+                                          "Género (A → Z)"
+                                  }
+                              )
+                          },
+                          onClick = {
+                              onSortSelected(
+                                  MusicViewModel.SortMode.GENRE,
+                                  if (sortMode == MusicViewModel.SortMode.GENRE) {
+                                      !sortDescending
+                                  } else {
+                                      false
+                                  }
+                              )
+                              showSortMenu = false
+                          }
+                      )
+
+                      DropdownMenuItem(
+                          text = {
+                              Text(
+                                  when {
+                                      sortMode == MusicViewModel.SortMode.DATE &&
+                                          sortDescending ->
+                                          "✓ Fecha (más nuevo → más viejo)"
+
+                                      sortMode == MusicViewModel.SortMode.DATE ->
+                                          "✓ Fecha (más viejo → más nuevo)"
+
+                                      else ->
+                                          "Fecha (más viejo → más nuevo)"
+                                  }
+                              )
+                          },
+                          onClick = {
+                              onSortSelected(
+                                  MusicViewModel.SortMode.DATE,
+                                  if (sortMode == MusicViewModel.SortMode.DATE) {
+                                      !sortDescending
+                                  } else {
+                                      true
+                                  }
+                              )
+                              showSortMenu = false
+                          }
+                      )
+
+                      DropdownMenuItem(
+                          text = {
+                              Text(
+                                  when {
+                                      sortMode == MusicViewModel.SortMode.DURATION &&
+                                          sortDescending ->
+                                          "✓ Duración (más larga → más corta)"
+
+                                      sortMode == MusicViewModel.SortMode.DURATION ->
+                                          "✓ Duración (más corta → más larga)"
+
+                                      else ->
+                                          "Duración (más corta → más larga)"
+                                  }
+                              )
+                          },
+                          onClick = {
+                              onSortSelected(
+                                  MusicViewModel.SortMode.DURATION,
+                                  if (sortMode == MusicViewModel.SortMode.DURATION) {
+                                      !sortDescending
+                                  } else {
+                                      false
+                                  }
+                              )
+                              showSortMenu = false
+                          }
+                      )
+
+                      DropdownMenuItem(
+                          text = {
+                              Text(
+                                  when {
+                                      sortMode == MusicViewModel.SortMode.FILE_SIZE &&
+                                          sortDescending ->
+                                          "✓ Tamaño (más grande → más pequeño)"
+
+                                      sortMode == MusicViewModel.SortMode.FILE_SIZE ->
+                                          "✓ Tamaño (más pequeño → más grande)"
+
+                                      else ->
+                                          "Tamaño (más pequeño → más grande)"
+                                  }
+                              )
+                          },
+                          onClick = {
+                              onSortSelected(
+                                  MusicViewModel.SortMode.FILE_SIZE,
+                                  if (sortMode == MusicViewModel.SortMode.FILE_SIZE) {
+                                      !sortDescending
+                                  } else {
+                                      false
+                                  }
+                              )
+                              showSortMenu = false
+                          }
+                      )
+                  }
+              }
+          }
+
+          Spacer(modifier = Modifier.height(10.dp))
+
+          HorizontalDivider(
             color = DividerColor.copy(alpha = 0.5f),
             thickness = 1.dp
         )

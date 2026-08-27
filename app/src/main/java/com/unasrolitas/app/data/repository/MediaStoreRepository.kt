@@ -34,7 +34,9 @@ class MediaStoreRepository(private val context: Context) {
             MediaStore.Audio.Media.SIZE,
             MediaStore.Audio.Media.MIME_TYPE,
             MediaStore.Audio.Media.YEAR,
-            MediaStore.Audio.Media.GENRE
+            MediaStore.Audio.Media.GENRE,
+            MediaStore.Audio.Media.DATE_MODIFIED,
+            MediaStore.Audio.Media.DATA
         )
 
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
@@ -56,6 +58,7 @@ class MediaStoreRepository(private val context: Context) {
                 val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                 val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
                 val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+                val dataColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
                 val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
                 val yearColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
                 val genreColumn = cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
@@ -86,6 +89,9 @@ class MediaStoreRepository(private val context: Context) {
                             mimeType = cursor.getString(mimeColumn),
                             sizeBytes = cursor.getLong(sizeColumn).coerceAtLeast(0L),
                             dateModified = cursor.getLong(dateModifiedColumn).coerceAtLeast(0L),
+                            filePath = dataColumn.takeIf { it >= 0 }
+                                ?.let { cursor.getString(it) }
+                                .orEmpty(),
                             isFavorite = id in favoriteIds
                         )
                     )

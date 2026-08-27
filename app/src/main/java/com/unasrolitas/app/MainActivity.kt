@@ -166,7 +166,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun UnasRolitasMainContent(viewModel: MusicViewModel) {
-    var showSortMenu by rememberSaveable { mutableStateOf(false) }
 
     val navController = rememberNavController()
 
@@ -280,8 +279,12 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                         }
                     },
 
-                    onSortClick = {
-                        showSortMenu = true
+                    sortMode = sortMode,
+                    sortDescending = sortDescending,
+
+                    onSortSelected = { mode, descending ->
+                        viewModel.setSortMode(mode)
+                        viewModel.setSortDescending(descending)
                     },
                 )
             }
@@ -311,163 +314,6 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                 startDestination = NavRoutes.Library.route
             ) {
                 composable(NavRoutes.Library.route) {
-
-            if (showSortMenu) {
-                DropdownMenu(
-                    expanded = true,
-                    onDismissRequest = {
-                        showSortMenu = false
-                    }
-                ) {
-                    Text(
-                        text = "Ordenar por",
-                        modifier = Modifier.padding(
-                            horizontal = 16.dp,
-                            vertical = 8.dp
-                        )
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                if (sortMode == MusicViewModel.SortMode.TITLE &&
-                                    sortDescending)
-                                    "Título (Z → A)"
-                                else
-                                    "Título (A → Z)"
-                            )
-                        },
-                        onClick = {
-                            val same = sortMode == MusicViewModel.SortMode.TITLE
-                            viewModel.setSortMode(MusicViewModel.SortMode.TITLE)
-                            viewModel.setSortDescending(
-                                if (same) !sortDescending else false
-                            )
-                            showSortMenu = false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                if (sortMode == MusicViewModel.SortMode.ARTIST &&
-                                    sortDescending)
-                                    "Artista (Z → A)"
-                                else
-                                    "Artista (A → Z)"
-                            )
-                        },
-                        onClick = {
-                            val same = sortMode == MusicViewModel.SortMode.ARTIST
-                            viewModel.setSortMode(MusicViewModel.SortMode.ARTIST)
-                            viewModel.setSortDescending(
-                                if (same) !sortDescending else false
-                            )
-                            showSortMenu = false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                if (sortMode == MusicViewModel.SortMode.ALBUM &&
-                                    sortDescending)
-                                    "Álbum (Z → A)"
-                                else
-                                    "Álbum (A → Z)"
-                            )
-                        },
-                        onClick = {
-                            val same = sortMode == MusicViewModel.SortMode.ALBUM
-                            viewModel.setSortMode(MusicViewModel.SortMode.ALBUM)
-                            viewModel.setSortDescending(
-                                if (same) !sortDescending else false
-                            )
-                            showSortMenu = false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                if (sortMode == MusicViewModel.SortMode.GENRE &&
-                                    sortDescending)
-                                    "Género (Z → A)"
-                                else
-                                    "Género (A → Z)"
-                            )
-                        },
-                        onClick = {
-                            val same = sortMode == MusicViewModel.SortMode.GENRE
-                            viewModel.setSortMode(MusicViewModel.SortMode.GENRE)
-                            viewModel.setSortDescending(
-                                if (same) !sortDescending else false
-                            )
-                            showSortMenu = false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                if (sortMode == MusicViewModel.SortMode.DATE &&
-                                    sortDescending)
-                                    "Fecha (más nuevo → más viejo)"
-                                else
-                                    "Fecha (más viejo → más nuevo)"
-                            )
-                        },
-                        onClick = {
-                            val same = sortMode == MusicViewModel.SortMode.DATE
-                            viewModel.setSortMode(MusicViewModel.SortMode.DATE)
-                            viewModel.setSortDescending(
-                                if (same) !sortDescending else true
-                            )
-                            showSortMenu = false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                if (sortMode == MusicViewModel.SortMode.DURATION &&
-                                    sortDescending)
-                                    "Duración (más larga → más corta)"
-                                else
-                                    "Duración (más corta → más larga)"
-                            )
-                        },
-                        onClick = {
-                            val same = sortMode == MusicViewModel.SortMode.DURATION
-                            viewModel.setSortMode(MusicViewModel.SortMode.DURATION)
-                            viewModel.setSortDescending(
-                                if (same) !sortDescending else true
-                            )
-                            showSortMenu = false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                if (sortMode == MusicViewModel.SortMode.FILE_SIZE &&
-                                    sortDescending)
-                                    "Tamaño (más grande → más pequeño)"
-                                else
-                                    "Tamaño (más pequeño → más grande)"
-                            )
-                        },
-                        onClick = {
-                            val same = sortMode == MusicViewModel.SortMode.FILE_SIZE
-                            viewModel.setSortMode(MusicViewModel.SortMode.FILE_SIZE)
-                            viewModel.setSortDescending(
-                                if (same) !sortDescending else true
-                            )
-                            showSortMenu = false
-                        }
-                    )
-                }
-            }
 
 LibraryScreen(
                         songs = viewModel.songsForTab(activeTab),
