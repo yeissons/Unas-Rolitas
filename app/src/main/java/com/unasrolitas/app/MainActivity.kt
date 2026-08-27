@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
 
-        var showSortMenu by rememberSaveable { mutableStateOf(false) }
+        var showSortMenu by remember { mutableStateOf(false) }
             UnasRolitasTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -273,7 +273,7 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                         libraryPlaybackContext?.let { context ->
                             viewModel.shuffleContext(context)
                         }
-                    }
+                    },
 
                     onSortClick = {
                         showSortMenu = true
