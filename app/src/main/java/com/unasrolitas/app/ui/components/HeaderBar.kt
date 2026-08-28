@@ -251,24 +251,18 @@ fun HeaderBar(
              * - no usa una pastilla de selección
              * - solamente muestra la flecha
              */
-            IconButton(
-                onClick = { showMoreTabs = !showMoreTabs },
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = if (showMoreTabs) {
-                        Icons.Default.ChevronLeft
-                    } else {
-                        Icons.Default.ChevronRight
-                    },
-                    contentDescription = if (showMoreTabs) {
-                        "Ocultar categorías"
-                    } else {
-                        "Mostrar más categorías"
-                    },
-                    tint = TextSecondary,
-                    modifier = Modifier.size(24.dp)
-                )
+            if (!showMoreTabs) {
+                IconButton(
+                    onClick = { showMoreTabs = true },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Mostrar más categorías",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
 
             /*
