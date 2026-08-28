@@ -151,6 +151,32 @@ class PreferencesRepository(context: Context) {
     }
 
 
+    fun saveUserPlaylists(
+        playlists: List<com.unasrolitas.app.data.model.Playlist>
+    ) {
+        val raw = playlists.map { playlist ->
+            buildString {
+                append(playlist.id)
+                append("|")
+                append(playlist.name)
+                append("|")
+                append(playlist.songIds.joinToString(","))
+
+                if (playlist.isExternalFile) {
+                    append("|external")
+                    append("|")
+                    append(playlist.sourceUri?.toString() ?: "")
+                    append("|")
+                    append(playlist.sourceFormat ?: "")
+                }
+            }
+        }.toSet()
+
+        prefs.edit()
+            .putStringSet("user_playlists", raw)
+            .apply()
+    }
+
     fun createPlaylist(name: String): com.unasrolitas.app.data.model.Playlist? {
         val cleanName = name.trim()
         if (cleanName.isBlank()) return null
