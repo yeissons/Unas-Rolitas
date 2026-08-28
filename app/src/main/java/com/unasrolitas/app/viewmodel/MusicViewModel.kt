@@ -11,6 +11,7 @@ import com.unasrolitas.app.data.model.Song
 import com.unasrolitas.app.data.repository.CoverArtRepository
 import com.unasrolitas.app.data.repository.LyricsRepository
 import com.unasrolitas.app.data.repository.MediaStoreRepository
+import com.unasrolitas.app.data.repository.PlaylistFileRepository
 import com.unasrolitas.app.data.repository.PreferencesRepository
 import com.unasrolitas.app.player.MusicPlayerManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private val lyricsRepository = LyricsRepository(application)
     private val coverArtRepository = CoverArtRepository(application)
     private val prefsRepository = PreferencesRepository(application)
+    private val playlistFileRepository = PlaylistFileRepository(application)
 
     private val _allSongs = MutableStateFlow<List<Song>>(emptyList())
     val allSongs: StateFlow<List<Song>> = _allSongs.asStateFlow()
@@ -46,7 +48,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         DATE,
         DURATION,
         FILE_SIZE,
-        CUSTOM
+        FILE_NAME,
+        FOLDER
     }
 
     private val _sortMode = MutableStateFlow(SortMode.TITLE)
@@ -137,9 +140,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             _allSongs.value = songs
-            val generatedPlaylists = mediaStoreRepository.getPlaylists(songs)
-            val userPlaylists = prefsRepository.getUserPlaylists()
-            _playlists.value = generatedPlaylists + userPlaylists
+            _playlists.value = prefsRepository.getUserPlaylists()
 
             if (playerManager.playlist.value.isEmpty() && songs.isNotEmpty()) {
                 playerManager.setQueue(songs, 0, autoPlay = false)
@@ -167,45 +168,18 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         songs: List<Song>,
         tab: String
     ): List<Song> {
+
+        val mode = _sortMode.value
+
         val sorted = when (tab) {
 
             "SONGS" -> {
-                when (_sortMode.value) {
+                when (mode) {
                     SortMode.TITLE ->
                         songs.sortedBy { it.title.trim().lowercase() }
 
-                    SortMode.ARTIST ->
-                        songs.sortedWith(
-                            compareBy<Song> {
-                                it.artist.trim()
-                                    .ifBlank { "Artista desconocido" }
-                                    .lowercase()
-                            }.thenBy {
-                                it.title.trim().lowercase()
-                            }
-                        )
-
-                    SortMode.ALBUM ->
-                        songs.sortedWith(
-                            compareBy<Song> {
-                                it.album.trim()
-                                    .ifBlank { "Álbum desconocido" }
-                                    .lowercase()
-                            }.thenBy {
-                                it.title.trim().lowercase()
-                            }
-                        )
-
-                    SortMode.GENRE ->
-                        songs.sortedWith(
-                            compareBy<Song> {
-                                it.genre?.trim()
-                                    .takeUnless { value -> value.isNullOrBlank() }
-                                    ?: "Sin género"
-                            }.thenBy {
-                                it.title.trim().lowercase()
-                            }
-                        )
+                    SortMode.FILE_NAME ->
+                        songs.sortedBy { fileNameForLibrary(it.filePath) }
 
                     SortMode.DATE ->
                         songs.sortedBy { it.dateModified }
@@ -216,14 +190,13 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                     SortMode.FILE_SIZE ->
                         songs.sortedBy { it.sizeBytes }
 
-                    SortMode.CUSTOM ->
-                        songs
-
+                    else ->
+                        songs.sortedBy { it.title.trim().lowercase() }
                 }
             }
 
             "ALBUMS" -> {
-                when (_sortMode.value) {
+                when (mode) {
                     SortMode.ALBUM ->
                         songs.sortedWith(
                             compareBy<Song> {
@@ -248,6 +221,15 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                             }
                         )
 
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
+
                     else ->
                         songs.sortedWith(
                             compareBy<Song> {
@@ -262,7 +244,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             "ARTISTS" -> {
-                when (_sortMode.value) {
+                when (mode) {
                     SortMode.ARTIST ->
                         songs.sortedWith(
                             compareBy<Song> {
@@ -273,6 +255,26 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                                 it.title.trim().lowercase()
                             }
                         )
+
+                    SortMode.ALBUM ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.album.trim()
+                                    .ifBlank { "Álbum desconocido" }
+                                    .lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
 
                     else ->
                         songs.sortedWith(
@@ -287,67 +289,174 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            "FOLDERS" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        folderNameForLibrary(it.filePath).lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-            }
-
             "GENRES" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.genre?.trim()
-                            .takeUnless { value -> value.isNullOrBlank() }
-                            ?: "Sin género"
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
+                when (mode) {
+                    SortMode.GENRE ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.genre?.trim()
+                                    .takeUnless { value -> value.isNullOrBlank() }
+                                    ?: "Sin género"
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
+
+                    else ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                it.genre?.trim()
+                                    .takeUnless { value -> value.isNullOrBlank() }
+                                    ?: "Sin género"
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+                }
             }
 
-            "FAVORITES" -> {
-                songs.sortedBy { it.title.trim().lowercase() }
+            "FOLDERS" -> {
+                when (mode) {
+                    SortMode.FOLDER ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                folderNameForLibrary(it.filePath).lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
+
+                    else ->
+                        songs.sortedWith(
+                            compareBy<Song> {
+                                folderNameForLibrary(it.filePath).lowercase()
+                            }.thenBy {
+                                it.title.trim().lowercase()
+                            }
+                        )
+                }
+            }
+
+            "FAVORITES",
+            "DOWNLOADED",
+            "PODCASTS",
+            "AUDIOBOOKS" -> {
+                when (mode) {
+                    SortMode.TITLE ->
+                        songs.sortedBy { it.title.trim().lowercase() }
+
+                    SortMode.FILE_NAME ->
+                        songs.sortedBy { fileNameForLibrary(it.filePath) }
+
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
+
+                    else ->
+                        songs.sortedBy { it.title.trim().lowercase() }
+                }
             }
 
             "MOST_PLAYED" -> {
-                songs.sortedWith(
-                    compareByDescending<Song> { it.playCount }
-                        .thenBy { it.title.trim().lowercase() }
-                )
+                when (mode) {
+                    SortMode.TITLE ->
+                        songs.sortedBy { it.title.trim().lowercase() }
+
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
+
+                    else ->
+                        songs.sortedWith(
+                            compareByDescending<Song> { it.playCount }
+                                .thenBy { it.title.trim().lowercase() }
+                        )
+                }
             }
 
             "RECENTLY_ADDED" -> {
-                songs.sortedByDescending { it.id }
+                when (mode) {
+                    SortMode.TITLE ->
+                        songs.sortedBy { it.title.trim().lowercase() }
+
+                    SortMode.FILE_NAME ->
+                        songs.sortedBy { fileNameForLibrary(it.filePath) }
+
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
+
+                    else ->
+                        songs.sortedByDescending { it.id }
+                }
             }
 
             "HISTORY" -> {
-                songs
+                when (mode) {
+                    SortMode.TITLE ->
+                        songs.sortedBy { it.title.trim().lowercase() }
+
+                    SortMode.FILE_NAME ->
+                        songs.sortedBy { fileNameForLibrary(it.filePath) }
+
+                    SortMode.DATE ->
+                        songs.sortedBy { it.dateModified }
+
+                    SortMode.DURATION ->
+                        songs.sortedBy { it.durationMs }
+
+                    SortMode.FILE_SIZE ->
+                        songs.sortedBy { it.sizeBytes }
+
+                    else ->
+                        songs
+                }
             }
 
-            "DOWNLOADED" -> {
-                songs.sortedBy { it.title.trim().lowercase() }
-            }
-
-            "PODCASTS" -> {
-                songs.sortedBy { it.title.trim().lowercase() }
-            }
-
-            "AUDIOBOOKS" -> {
-                songs.sortedWith(
-                    compareBy<Song> {
-                        it.album.trim().lowercase()
-                    }.thenBy {
-                        it.title.trim().lowercase()
-                    }
-                )
-            }
-
+            /*
+             * PLAYLISTS NO CONTIENE CANCIONES DE LA BIBLIOTECA.
+             *
+             * Las playlists reales vienen exclusivamente de
+             * PreferencesRepository.getUserPlaylists().
+             *
+             * Esta función no debe generar ni devolver canciones
+             * para esa pestaña.
+             */
             "PLAYLISTS" -> {
-                songs
+                emptyList()
             }
 
             else -> {
@@ -382,7 +491,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             "PLAYLISTS" -> {
-                _allSongs.value
+                emptyList()
             }
 
             "GENRES" -> {
@@ -463,6 +572,11 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         return sortSongsContextually(songs, tab)
+    }
+
+    private fun fileNameForLibrary(path: String): String {
+        if (path.isBlank()) return ""
+        return path.substringAfterLast('/').trim().lowercase()
     }
 
     private fun folderNameForLibrary(path: String): String {
@@ -617,9 +731,24 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         }
         _allSongs.value = updated
         viewModelScope.launch {
-            val generated = mediaStoreRepository.getPlaylists(updated)
-            _playlists.value = generated + prefsRepository.getUserPlaylists()
+            _playlists.value = prefsRepository.getUserPlaylists()
         }
+    }
+
+    fun importPlaylist(uri: android.net.Uri): Playlist? {
+        val playlist = playlistFileRepository.readPlaylist(
+            uri = uri,
+            songs = _allSongs.value
+        ) ?: return null
+
+        val updated = _playlists.value
+            .filterNot { it.id == playlist.id } + playlist
+
+        _playlists.value = updated
+
+        prefsRepository.saveUserPlaylists(updated)
+
+        return playlist
     }
 
     fun createPlaylist(name: String): Playlist? {
@@ -657,6 +786,16 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         return removed
+    }
+
+    fun renamePlaylist(playlistId: String, newName: String): Boolean {
+        val renamed = prefsRepository.renamePlaylist(playlistId, newName)
+
+        if (renamed) {
+            _playlists.value = prefsRepository.getUserPlaylists()
+        }
+
+        return renamed
     }
 
     fun deletePlaylist(playlistId: String): Boolean {

@@ -419,136 +419,183 @@ fun HeaderBar(
                           fontWeight = FontWeight.Bold
                       )
 
-                      DropdownMenuItem(
-                          text = {
-                              Text(
-                                  when {
-                                      sortMode == MusicViewModel.SortMode.TITLE &&
-                                          sortDescending ->
-                                          "✓ Título (Z → A)"
-
-                                      sortMode == MusicViewModel.SortMode.TITLE ->
-                                          "✓ Título (A → Z)"
-
-                                      else ->
-                                          "Título (A → Z)"
-                                  }
-                              )
-                          },
-                          onClick = {
-                              onSortSelected(
-                                  MusicViewModel.SortMode.TITLE,
-                                  if (sortMode == MusicViewModel.SortMode.TITLE) {
-                                      !sortDescending
-                                  } else {
-                                      false
-                                  }
-                              )
-                              showSortMenu = false
+                      fun sortLabel(
+                          mode: MusicViewModel.SortMode,
+                          ascending: String,
+                          descending: String
+                      ): String {
+                          return when {
+                              sortMode == mode && sortDescending -> "✓ $descending"
+                              sortMode == mode -> "✓ $ascending"
+                              else -> ascending
                           }
+                      }
+
+                      val showTitle = activeTab !in setOf(
+                          "ALBUMS",
+                          "ARTISTS",
+                          "GENRES",
+                          "FOLDERS"
                       )
 
-                      DropdownMenuItem(
-                          text = {
-                              Text(
-                                  when {
-                                      sortMode == MusicViewModel.SortMode.ARTIST &&
-                                          sortDescending ->
-                                          "✓ Artista (Z → A)"
-
-                                      sortMode == MusicViewModel.SortMode.ARTIST ->
-                                          "✓ Artista (A → Z)"
-
-                                      else ->
-                                          "Artista (A → Z)"
-                                  }
-                              )
-                          },
-                          onClick = {
-                              onSortSelected(
-                                  MusicViewModel.SortMode.ARTIST,
-                                  if (sortMode == MusicViewModel.SortMode.ARTIST) {
-                                      !sortDescending
-                                  } else {
-                                      false
-                                  }
-                              )
-                              showSortMenu = false
-                          }
+                      val showFileName = activeTab !in setOf(
+                          "ALBUMS",
+                          "ARTISTS",
+                          "GENRES",
+                          "FOLDERS"
                       )
 
+                      val showArtist = activeTab == "ARTISTS"
+                      val showAlbum = activeTab == "ALBUMS"
+                      val showGenre = activeTab == "GENRES"
+                      val showFolder = activeTab == "FOLDERS"
+
+                      if (showTitle) {
+                          DropdownMenuItem(
+                              text = {
+                                  Text(
+                                      sortLabel(
+                                          MusicViewModel.SortMode.TITLE,
+                                          "Título (A → Z)",
+                                          "Título (Z → A)"
+                                      )
+                                  )
+                              },
+                              onClick = {
+                                  onSortSelected(
+                                      MusicViewModel.SortMode.TITLE,
+                                      if (sortMode == MusicViewModel.SortMode.TITLE) {
+                                          !sortDescending
+                                      } else false
+                                  )
+                                  showSortMenu = false
+                              }
+                          )
+                      }
+
+                      if (showFileName) {
+                          DropdownMenuItem(
+                              text = {
+                                  Text(
+                                      sortLabel(
+                                          MusicViewModel.SortMode.FILE_NAME,
+                                          "Nombre de archivo (A → Z)",
+                                          "Nombre de archivo (Z → A)"
+                                      )
+                                  )
+                              },
+                              onClick = {
+                                  onSortSelected(
+                                      MusicViewModel.SortMode.FILE_NAME,
+                                      if (sortMode == MusicViewModel.SortMode.FILE_NAME) {
+                                          !sortDescending
+                                      } else false
+                                  )
+                                  showSortMenu = false
+                              }
+                          )
+                      }
+
+                      if (showArtist) {
+                          DropdownMenuItem(
+                              text = {
+                                  Text(
+                                      sortLabel(
+                                          MusicViewModel.SortMode.ARTIST,
+                                          "Artista (A → Z)",
+                                          "Artista (Z → A)"
+                                      )
+                                  )
+                              },
+                              onClick = {
+                                  onSortSelected(
+                                      MusicViewModel.SortMode.ARTIST,
+                                      if (sortMode == MusicViewModel.SortMode.ARTIST) {
+                                          !sortDescending
+                                      } else false
+                                  )
+                                  showSortMenu = false
+                              }
+                          )
+                      }
+
+                      if (showAlbum) {
+                          DropdownMenuItem(
+                              text = {
+                                  Text(
+                                      sortLabel(
+                                          MusicViewModel.SortMode.ALBUM,
+                                          "Álbum (A → Z)",
+                                          "Álbum (Z → A)"
+                                      )
+                                  )
+                              },
+                              onClick = {
+                                  onSortSelected(
+                                      MusicViewModel.SortMode.ALBUM,
+                                      if (sortMode == MusicViewModel.SortMode.ALBUM) {
+                                          !sortDescending
+                                      } else false
+                                  )
+                                  showSortMenu = false
+                              }
+                          )
+                      }
+
+                      if (showGenre) {
+                          DropdownMenuItem(
+                              text = {
+                                  Text(
+                                      sortLabel(
+                                          MusicViewModel.SortMode.GENRE,
+                                          "Género (A → Z)",
+                                          "Género (Z → A)"
+                                      )
+                                  )
+                              },
+                              onClick = {
+                                  onSortSelected(
+                                      MusicViewModel.SortMode.GENRE,
+                                      if (sortMode == MusicViewModel.SortMode.GENRE) {
+                                          !sortDescending
+                                      } else false
+                                  )
+                                  showSortMenu = false
+                              }
+                          )
+                      }
+
+                      if (showFolder) {
+                          DropdownMenuItem(
+                              text = {
+                                  Text(
+                                      sortLabel(
+                                          MusicViewModel.SortMode.FOLDER,
+                                          "Carpeta (A → Z)",
+                                          "Carpeta (Z → A)"
+                                      )
+                                  )
+                              },
+                              onClick = {
+                                  onSortSelected(
+                                      MusicViewModel.SortMode.FOLDER,
+                                      if (sortMode == MusicViewModel.SortMode.FOLDER) {
+                                          !sortDescending
+                                      } else false
+                                  )
+                                  showSortMenu = false
+                              }
+                          )
+                      }
+
                       DropdownMenuItem(
                           text = {
                               Text(
-                                  when {
-                                      sortMode == MusicViewModel.SortMode.ALBUM &&
-                                          sortDescending ->
-                                          "✓ Álbum (Z → A)"
-
-                                      sortMode == MusicViewModel.SortMode.ALBUM ->
-                                          "✓ Álbum (A → Z)"
-
-                                      else ->
-                                          "Álbum (A → Z)"
-                                  }
-                              )
-                          },
-                          onClick = {
-                              onSortSelected(
-                                  MusicViewModel.SortMode.ALBUM,
-                                  if (sortMode == MusicViewModel.SortMode.ALBUM) {
-                                      !sortDescending
-                                  } else {
-                                      false
-                                  }
-                              )
-                              showSortMenu = false
-                          }
-                      )
-
-                      DropdownMenuItem(
-                          text = {
-                              Text(
-                                  when {
-                                      sortMode == MusicViewModel.SortMode.GENRE &&
-                                          sortDescending ->
-                                          "✓ Género (Z → A)"
-
-                                      sortMode == MusicViewModel.SortMode.GENRE ->
-                                          "✓ Género (A → Z)"
-
-                                      else ->
-                                          "Género (A → Z)"
-                                  }
-                              )
-                          },
-                          onClick = {
-                              onSortSelected(
-                                  MusicViewModel.SortMode.GENRE,
-                                  if (sortMode == MusicViewModel.SortMode.GENRE) {
-                                      !sortDescending
-                                  } else {
-                                      false
-                                  }
-                              )
-                              showSortMenu = false
-                          }
-                      )
-
-                      DropdownMenuItem(
-                          text = {
-                              Text(
-                                  when {
-                                      sortMode == MusicViewModel.SortMode.DATE &&
-                                          sortDescending ->
-                                          "✓ Fecha (más nuevo → más viejo)"
-
-                                      sortMode == MusicViewModel.SortMode.DATE ->
-                                          "✓ Fecha (más viejo → más nuevo)"
-
-                                      else ->
-                                          "Fecha (más viejo → más nuevo)"
-                                  }
+                                  sortLabel(
+                                      MusicViewModel.SortMode.DATE,
+                                      "Fecha (más viejo → más nuevo)",
+                                      "Fecha (más nuevo → más viejo)"
+                                  )
                               )
                           },
                           onClick = {
@@ -556,9 +603,7 @@ fun HeaderBar(
                                   MusicViewModel.SortMode.DATE,
                                   if (sortMode == MusicViewModel.SortMode.DATE) {
                                       !sortDescending
-                                  } else {
-                                      true
-                                  }
+                                  } else false
                               )
                               showSortMenu = false
                           }
@@ -567,17 +612,11 @@ fun HeaderBar(
                       DropdownMenuItem(
                           text = {
                               Text(
-                                  when {
-                                      sortMode == MusicViewModel.SortMode.DURATION &&
-                                          sortDescending ->
-                                          "✓ Duración (más larga → más corta)"
-
-                                      sortMode == MusicViewModel.SortMode.DURATION ->
-                                          "✓ Duración (más corta → más larga)"
-
-                                      else ->
-                                          "Duración (más corta → más larga)"
-                                  }
+                                  sortLabel(
+                                      MusicViewModel.SortMode.DURATION,
+                                      "Duración (más corta → más larga)",
+                                      "Duración (más larga → más corta)"
+                                  )
                               )
                           },
                           onClick = {
@@ -585,9 +624,7 @@ fun HeaderBar(
                                   MusicViewModel.SortMode.DURATION,
                                   if (sortMode == MusicViewModel.SortMode.DURATION) {
                                       !sortDescending
-                                  } else {
-                                      false
-                                  }
+                                  } else false
                               )
                               showSortMenu = false
                           }
@@ -596,17 +633,11 @@ fun HeaderBar(
                       DropdownMenuItem(
                           text = {
                               Text(
-                                  when {
-                                      sortMode == MusicViewModel.SortMode.FILE_SIZE &&
-                                          sortDescending ->
-                                          "✓ Tamaño (más grande → más pequeño)"
-
-                                      sortMode == MusicViewModel.SortMode.FILE_SIZE ->
-                                          "✓ Tamaño (más pequeño → más grande)"
-
-                                      else ->
-                                          "Tamaño (más pequeño → más grande)"
-                                  }
+                                  sortLabel(
+                                      MusicViewModel.SortMode.FILE_SIZE,
+                                      "Tamaño (más pequeño → más grande)",
+                                      "Tamaño (más grande → más pequeño)"
+                                  )
                               )
                           },
                           onClick = {
@@ -614,14 +645,11 @@ fun HeaderBar(
                                   MusicViewModel.SortMode.FILE_SIZE,
                                   if (sortMode == MusicViewModel.SortMode.FILE_SIZE) {
                                       !sortDescending
-                                  } else {
-                                      false
-                                  }
+                                  } else false
                               )
                               showSortMenu = false
                           }
-                      )
-                  }
+                      )                  }
               }
           }
 

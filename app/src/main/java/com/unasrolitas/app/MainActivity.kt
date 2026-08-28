@@ -204,6 +204,35 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
         }
     }
 
+    val importPlaylistLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                viewModel.getApplication<Application>().contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Algunos proveedores no permiten permisos persistentes.
+            }
+
+            val imported = viewModel.importPlaylist(uri)
+
+            if (imported == null) {
+                AppLogger.e(
+                    "PLAYLIST_IMPORT",
+                    "No se pudo importar la playlist: $uri"
+                )
+            } else {
+                AppLogger.i(
+                    "PLAYLIST_IMPORT",
+                    "Playlist importada: ${imported.name} (${imported.sourceFormat})"
+                )
+            }
+        }
+    }
+
     val exportLogLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/plain")
     ) { uri ->
@@ -245,6 +274,7 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
     var songForInfoDialog by remember { mutableStateOf<Song?>(null) }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    var playlistForRenameDialog by remember { mutableStateOf<Playlist?>(null) }
     var playlistForDeleteDialog by remember { mutableStateOf<Playlist?>(null) }
 
 
@@ -345,6 +375,25 @@ LibraryScreen(
                         },
                         onDeletePlaylist = { playlist ->
                             playlistForDeleteDialog = playlist
+                        },
+                        onRenamePlaylist = { playlist ->
+                            playlistForRenameDialog = playlist
+                        },
+                        onCreatePlaylist = {
+                            showCreatePlaylistDialog = true
+                        },
+                        onImportPlaylist = {
+                            importPlaylistLauncher.launch(
+                                arrayOf(
+                                    "audio/x-mpegurl",
+                                    "audio/mpegurl",
+                                    "application/vnd.apple.mpegurl",
+                                    "audio/x-scpls",
+                                    "application/pls+xml",
+                                    "application/vnd.ms-wpl",
+                                    "*/*"
+                                )
+                            )
                         },
                         onPlaybackContextChanged = { context ->
                             libraryPlaybackContext = context
@@ -642,6 +691,102 @@ LibraryScreen(
             }
 
             // Confirmar eliminación de playlist
+            // Renombrar playlist
+            if (playlistForRenameDialog != null) {
+                val playlist = playlistForRenameDialog
+                var playlistName by remember(playlist) {
+                    mutableStateOf(playlist?.name ?: "")
+                }
+                var playlistError by remember(playlist) {
+                    mutableStateOf<String?>(null)
+                }
+
+                AlertDialog(
+                    onDismissRequest = {
+                        playlistForRenameDialog = null
+                    },
+                    containerColor = DarkCard,
+                    title = {
+                        Text(
+                            text = "Renombrar playlist",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    },
+                    text = {
+                        Column {
+                            OutlinedTextField(
+                                value = playlistName,
+                                onValueChange = {
+                                    playlistName = it
+                                    playlistError = null
+                                },
+                                singleLine = true,
+                                label = {
+                                    Text("Nombre")
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            if (playlistError != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = playlistError!!,
+                                    color = Color.Red,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val target = playlist
+
+                                if (target == null) {
+                                    playlistForRenameDialog = null
+                                    return@TextButton
+                                }
+
+                                val renamed = viewModel.renamePlaylist(
+                                    target.id,
+                                    playlistName
+                                )
+
+                                if (renamed) {
+                                    playlistForRenameDialog = null
+                                } else {
+                                    playlistError =
+                                        if (playlistName.trim().isBlank()) {
+                                            "Escribe un nombre para la playlist."
+                                        } else {
+                                            "Ya existe una playlist con ese nombre."
+                                        }
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = "Guardar",
+                                color = OrangePrimary
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                playlistForRenameDialog = null
+                            }
+                        ) {
+                            Text(
+                                text = "Cancelar",
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                )
+            }
+
             if (playlistForDeleteDialog != null) {
                 val playlist = playlistForDeleteDialog!!
 

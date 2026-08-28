@@ -5,7 +5,6 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import com.unasrolitas.app.data.model.Playlist
 import com.unasrolitas.app.data.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -105,50 +104,4 @@ class MediaStoreRepository(private val context: Context) {
 
         songList
     }
-
-    suspend fun getPlaylists(songs: List<Song>): List<Playlist> =
-        withContext(Dispatchers.IO) {
-            if (songs.isEmpty()) return@withContext emptyList()
-
-            // Las playlists mostradas por la biblioteca deben representar
-            // agrupaciones reales y reproducibles, no listas ficticias.
-            val playlists = mutableListOf<Playlist>()
-
-            val favoriteSongs = songs.filter { it.isFavorite }
-            if (favoriteSongs.isNotEmpty()) {
-                playlists.add(
-                    Playlist(
-                        id = "pl_favorites",
-                        name = "Mis Favoritas",
-                        description = "Canciones marcadas con me gusta",
-                        songIds = favoriteSongs.map { it.id },
-                        isSystemPlaylist = true
-                    )
-                )
-            }
-
-            songs.groupBy { it.album.trim() }
-                .filterKeys {
-                    it.isNotBlank() && !it.equals(
-                        "<Álbum Desconocido>",
-                        ignoreCase = true
-                    )
-                }
-                .toSortedMap(String.CASE_INSENSITIVE_ORDER)
-                .forEach { (album, albumSongs) ->
-                    playlists.add(
-                        Playlist(
-                            id = "pl_album_${album.hashCode()}",
-                            name = album,
-                            description = "Álbum con ${albumSongs.size} rolitas",
-                            songIds = albumSongs
-                                .sortedBy { it.title.trim().lowercase() }
-                                .map { it.id },
-                            isSystemPlaylist = true
-                        )
-                    )
-                }
-
-            playlists
-        }
 }

@@ -96,36 +96,60 @@ class PreferencesRepository(context: Context) {
     fun getUserPlaylists(): List<com.unasrolitas.app.data.model.Playlist> {
         val raw = prefs.getStringSet("user_playlists", emptySet()) ?: emptySet()
 
-        return raw.mapNotNull { entry ->
-            val parts = entry.split("|", limit = 3)
-            if (parts.size != 3) return@mapNotNull null
+        val playlists = raw.mapNotNull { entry ->
+            val parts = entry.split("|")
+
+            if (parts.size < 3) return@mapNotNull null
 
             val id = parts[0]
             val name = parts[1]
+
+            // Una playlist solamente puede existir si fue creada
+            // explícitamente por el usuario o importada desde un archivo.
+            if (
+                id.isBlank() ||
+                name.isBlank() ||
+                !(id.startsWith("user_") || id.startsWith("file_"))
+            ) {
+                return@mapNotNull null
+            }
+
             val ids = parts[2]
                 .split(",")
                 .mapNotNull { it.toLongOrNull() }
 
-            if (id.isBlank() || name.isBlank()) null
-            else com.unasrolitas.app.data.model.Playlist(
+            val isExternalFile = parts.getOrNull(3) == "external"
+
+            val sourceUri = parts.getOrNull(4)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { android.net.Uri.parse(it) }
+
+            val sourceFormat = parts.getOrNull(5)
+                ?.takeIf { it.isNotBlank() }
+
+            com.unasrolitas.app.data.model.Playlist(
                 id = id,
                 name = name,
-                description = "Lista de reproducción",
+                description = if (isExternalFile) {
+                    "Playlist importada"
+                } else {
+                    "Lista de reproducción"
+                },
                 songIds = ids,
-                isSystemPlaylist = false
+                isSystemPlaylist = false,
+                isExternalFile = isExternalFile,
+                sourceUri = sourceUri,
+                sourceFormat = sourceFormat
             )
         }.sortedBy { it.name.lowercase() }
+
+        // Sustituye el contenido almacenado por únicamente las
+        // playlists válidas del modelo actual.
+        saveUserPlaylists(playlists)
+
+        return playlists
     }
 
-    fun saveUserPlaylists(playlists: List<com.unasrolitas.app.data.model.Playlist>) {
-        val raw = playlists.map {
-            "${it.id}|${it.name}|${it.songIds.joinToString(",")}"
-        }.toSet()
-
-        prefs.edit()
-            .putStringSet("user_playlists", raw)
-            .apply()
-    }
 
     fun createPlaylist(name: String): com.unasrolitas.app.data.model.Playlist? {
         val cleanName = name.trim()
@@ -175,6 +199,27 @@ class PreferencesRepository(context: Context) {
             songIds = current[index].songIds.filterNot { it == songId }
         )
 
+        saveUserPlaylists(current)
+        return true
+    }
+
+    fun renamePlaylist(playlistId: String, newName: String): Boolean {
+        val cleanName = newName.trim()
+        if (cleanName.isBlank()) return false
+
+        val current = getUserPlaylists().toMutableList()
+        val index = current.indexOfFirst { it.id == playlistId }
+
+        if (index < 0) return false
+
+        if (current.any {
+                it.id != playlistId &&
+                it.name.equals(cleanName, ignoreCase = true)
+            }) {
+            return false
+        }
+
+        current[index] = current[index].copy(name = cleanName)
         saveUserPlaylists(current)
         return true
     }

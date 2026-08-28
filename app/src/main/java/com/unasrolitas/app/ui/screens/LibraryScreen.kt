@@ -46,6 +46,9 @@ fun LibraryScreen(
     onSongMenuClick: (Song) -> Unit,
     onRemoveSongFromPlaylist: ((Playlist, Song) -> Unit)? = null,
     onDeletePlaylist: ((Playlist) -> Unit)? = null,
+    onRenamePlaylist: ((Playlist) -> Unit)? = null,
+    onCreatePlaylist: () -> Unit,
+    onImportPlaylist: () -> Unit = {},
     onPlaybackContextChanged: (List<Song>?) -> Unit
 ) {
     val filteredSongs = remember(songs, searchQuery) {
@@ -324,43 +327,128 @@ fun LibraryScreen(
             when (activeTab) {
 
                 "PLAYLISTS" -> {
-                    if (playlists.isEmpty()) {
-                        EmptyStateView(
-                            icon = Icons.Default.QueueMusic,
-                            title = "No hay listas de reproducción",
-                            subtitle = "Crea o añade canciones a una lista para verla aquí."
-                        )
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = 12.dp,
-                                bottom = 120.dp
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize()
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 12.dp,
+                                    bottom = 8.dp
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            items(playlists) { playlist ->
-                                PlaylistCardItem(
-                                    playlist = playlist,
-                                    songs = songs,
-                                    onClick = {
-                                        selectedPlaylist = playlist
-                                    },
-                                    onDelete = if (
-                                        !playlist.isSystemPlaylist &&
-                                        onDeletePlaylist != null
-                                    ) {
-                                        {
-                                            onDeletePlaylist(playlist)
-                                        }
-                                    } else {
-                                        null
-                                    }
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "Listas de reproducción",
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
+
+                                Text(
+                                    text = if (playlists.isEmpty()) {
+                                        "Todavía no tienes listas"
+                                    } else {
+                                        "${playlists.size} listas"
+                                    },
+                                    color = TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            FilledTonalButton(
+                                onClick = onCreatePlaylist,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null
+                                )
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                Text("Crear")
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedButton(
+                            onClick = onImportPlaylist,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FileOpen,
+                                contentDescription = null
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Importar playlist")
+                        }
+
+                        if (playlists.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(bottom = 100.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                EmptyStateView(
+                                    icon = Icons.Default.QueueMusic,
+                                    title = "No hay listas de reproducción",
+                                    subtitle = "Crea tu primera lista para organizar tus rolitas."
+                                )
+                            }
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(2),
+                                contentPadding = PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 8.dp,
+                                    bottom = 120.dp
+                                ),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(
+                                    items = playlists,
+                                    key = { it.id }
+                                ) { playlist ->
+                                    PlaylistCardItem(
+                                        playlist = playlist,
+                                        songs = songs,
+                                        onClick = {
+                                            selectedPlaylist = playlist
+                                        },
+                                        onRename = if (
+                                            !playlist.isSystemPlaylist &&
+                                            onRenamePlaylist != null
+                                        ) {
+                                            {
+                                                onRenamePlaylist(playlist)
+                                            }
+                                        } else {
+                                            null
+                                        },
+                                        onDelete = if (
+                                            !playlist.isSystemPlaylist &&
+                                            onDeletePlaylist != null
+                                        ) {
+                                            {
+                                                onDeletePlaylist(playlist)
+                                            }
+                                        } else {
+                                            null
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -857,6 +945,7 @@ fun PlaylistCardItem(
     playlist: Playlist,
     songs: List<Song>,
     onClick: () -> Unit,
+    onRename: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
     val coverSong = playlist.songIds
@@ -898,19 +987,66 @@ fun PlaylistCardItem(
                     )
                 }
 
-                if (onDelete != null) {
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                            .size(36.dp)
+                if (onRename != null || onDelete != null) {
+                    var menuExpanded by remember { mutableStateOf(false) }
+
+                    Box(
+                        modifier = Modifier.align(Alignment.TopEnd)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Eliminar playlist",
-                            tint = Color.White
-                        )
+                        IconButton(
+                            onClick = {
+                                menuExpanded = true
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Opciones de playlist",
+                                tint = Color.White
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = {
+                                menuExpanded = false
+                            }
+                        ) {
+                            if (onRename != null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("Renombrar")
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onRename()
+                                    }
+                                )
+                            }
+
+                            if (onDelete != null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("Eliminar")
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onDelete()
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
