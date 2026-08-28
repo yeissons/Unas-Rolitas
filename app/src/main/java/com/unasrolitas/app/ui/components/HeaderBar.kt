@@ -334,10 +334,13 @@ fun HeaderBar(
                   enabled = shuffleEnabled,
                   colors = ButtonDefaults.textButtonColors(
                       contentColor = OrangePrimary,
-                      disabledContentColor = TextSecondary.copy(alpha = 0.38f)
+                      disabledContentColor = TextSecondary.copy(alpha = 0.38f),
+                      containerColor = DarkCard,
+                      disabledContainerColor = DarkCard
                   ),
+                  shape = RoundedCornerShape(18.dp),
                   contentPadding = PaddingValues(
-                      horizontal = 10.dp,
+                      horizontal = 12.dp,
                       vertical = 6.dp
                   )
               ) {
@@ -355,7 +358,7 @@ fun HeaderBar(
                   Spacer(modifier = Modifier.width(6.dp))
 
                   Text(
-                      text = "Reproducir aleatorio",
+                      text = "Aleatorio",
                       color = shuffleColor,
                       fontSize = 13.sp,
                       fontWeight = FontWeight.SemiBold
@@ -374,10 +377,12 @@ fun HeaderBar(
                           showSortMenu = true
                       },
                       colors = ButtonDefaults.textButtonColors(
-                          contentColor = TextSecondary
+                          contentColor = TextSecondary,
+                          containerColor = DarkCard
                       ),
+                      shape = RoundedCornerShape(18.dp),
                       contentPadding = PaddingValues(
-                          horizontal = 10.dp,
+                          horizontal = 12.dp,
                           vertical = 6.dp
                       )
                   ) {
