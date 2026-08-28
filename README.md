@@ -1,59 +1,67 @@
 # ¿Unas Rolitas?
 
-Reproductor de música Android nativo.
+Aplicación nativa de música para Android.
 
-## Plataforma
+## Proyecto
 
-- Android nativo
+¿Unas Rolitas? es un reproductor de música nativo para Android que trabaja con la música disponible en el dispositivo.
+
+La aplicación utiliza:
+
 - Kotlin
 - Jetpack Compose
-- Media3 / ExoPlayer
-- MediaSession
-- PlaybackService
-- Gradle
+- Android MediaStore
+- Android Media3 / ExoPlayer
+- Coroutines
+- DataStore Preferences
 
-## Arquitectura
+## Biblioteca
 
-La aplicación está organizada en capas:
+La biblioteca utiliza el contenido real disponible en el dispositivo.
 
-- `data/` — modelos y repositorios.
-- `player/` — motor de reproducción.
-- `service/` — reproducción en segundo plano y MediaSession.
-- `audio/` — procesamiento y funciones de audio.
-- `permissions/` — permisos Android.
-- `navigation/` — navegación.
-- `ui/` — componentes y pantallas Compose.
-- `viewmodel/` — estado y lógica de presentación.
-- `util/` — utilidades y logging.
+Las categorías de la biblioteca representan la información real de las canciones y no generan listas de reproducción ficticias.
+
+## Listas de reproducción
+
+Las listas de reproducción son administradas por la aplicación.
+
+Se pueden:
+
+- Crear listas de reproducción.
+- Agregar canciones.
+- Quitar canciones.
+- Renombrar listas.
+- Eliminar listas.
+- Importar playlists externas compatibles.
+
+Las playlists no se generan automáticamente a partir de álbumes, artistas, géneros, carpetas u otras agrupaciones de la biblioteca.
 
 ## Reproducción
 
-La reproducción utiliza Media3 / ExoPlayer y una MediaSession Android real.
-
-Incluye:
-
-- Reproducción en segundo plano.
-- Notificación multimedia.
-- Controles multimedia del sistema.
-- Controles Bluetooth compatibles con MediaSession.
-- Cola de reproducción.
-- Reproducción anterior/siguiente.
-- Pausa/reanudación.
-- Barra de progreso.
-- Repetición.
-- Aleatorio.
-- Ecualizador/DSP.
+La reproducción utiliza Android Media3 / ExoPlayer y un servicio de reproducción en primer plano para mantener el control de reproducción cuando la aplicación pasa a segundo plano.
 
 ## Compilación
 
-El proyecto se compila mediante Gradle.
+Para generar el APK debug:
 
-La compilación de validación se realiza mediante GitHub Actions.
+    ./gradlew assembleDebug
 
-## Estado
+El APK generado se encuentra en:
 
-La rama de desarrollo actual es:
+    app/build/outputs/apk/debug/app-debug.apk
 
-`desarrollo-estabilizacion`
+## GitHub Actions
 
-El objetivo de esta rama es estabilizar primero la arquitectura Android y posteriormente implementar la experiencia visual y las funciones definidas para ¿Unas Rolitas?.
+El proyecto utiliza GitHub Actions para compilar automáticamente el APK debug cuando se realiza un push sobre la rama principal `main`.
+
+También puede ejecutarse manualmente mediante `workflow_dispatch`.
+
+El workflow genera un APK debug estándar y lo publica como artefacto `unas-rolitas-debug`.
+
+## Estado del proyecto
+
+La rama principal del proyecto es `main`.
+
+El proyecto está enfocado exclusivamente en la aplicación Android nativa.
+
+No se utiliza ningún entorno de web preview como parte de la aplicación Android.
