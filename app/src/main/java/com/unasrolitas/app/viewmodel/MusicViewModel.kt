@@ -420,7 +420,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                         songs.sortedBy { it.sizeBytes }
 
                     else ->
-                        songs.sortedByDescending { it.id }
+                        songs.sortedByDescending { it.dateAdded }
                 }
             }
 

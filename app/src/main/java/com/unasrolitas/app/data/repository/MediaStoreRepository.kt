@@ -35,6 +35,7 @@ class MediaStoreRepository(private val context: Context) {
             MediaStore.Audio.Media.YEAR,
             MediaStore.Audio.Media.GENRE,
             MediaStore.Audio.Media.DATE_MODIFIED,
+            MediaStore.Audio.Media.DATE_ADDED,
             MediaStore.Audio.Media.DATA
         )
 
@@ -57,6 +58,7 @@ class MediaStoreRepository(private val context: Context) {
                 val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                 val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
                 val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+                val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
                 val dataColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
                 val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
                 val yearColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
@@ -88,6 +90,7 @@ class MediaStoreRepository(private val context: Context) {
                             mimeType = cursor.getString(mimeColumn),
                             sizeBytes = cursor.getLong(sizeColumn).coerceAtLeast(0L),
                             dateModified = cursor.getLong(dateModifiedColumn).coerceAtLeast(0L),
+                            dateAdded = cursor.getLong(dateAddedColumn).coerceAtLeast(0L),
                             filePath = dataColumn.takeIf { it >= 0 }
                                 ?.let { cursor.getString(it) }
                                 .orEmpty(),
