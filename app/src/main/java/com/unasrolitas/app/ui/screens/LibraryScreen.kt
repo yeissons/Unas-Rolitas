@@ -30,8 +30,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.unasrolitas.app.data.model.Playlist
 import com.unasrolitas.app.data.model.Song
+import com.unasrolitas.app.viewmodel.MusicViewModel
 import com.unasrolitas.app.ui.components.SongRowItem
 import com.unasrolitas.app.ui.theme.*
+import androidx.activity.compose.BackHandler
 
 @Composable
 fun LibraryScreen(
@@ -41,6 +43,8 @@ fun LibraryScreen(
     isPlaying: Boolean,
     searchQuery: String,
     activeTab: String,
+    sortMode: MusicViewModel.SortMode,
+    sortDescending: Boolean,
     onSongSelect: (Song) -> Unit,
     onFavoriteToggle: (Song) -> Unit,
     onSongMenuClick: (Song) -> Unit,
@@ -89,6 +93,14 @@ fun LibraryScreen(
         androidx.compose.runtime.mutableStateOf<Playlist?>(null)
     }
 
+    BackHandler(
+        enabled = selectedPlaylist != null || selectedGroup != null
+    ) {
+        selectedPlaylist = null
+        selectedGroup = null
+        onPlaybackContextChanged(null)
+    }
+
     val detailSongs = remember(
         filteredSongs,
         selectedGroup,
@@ -116,6 +128,20 @@ fun LibraryScreen(
         }
     }
 
+    val sortedDetailSongs = remember(
+        detailSongs,
+        sortMode,
+        sortDescending
+    ) {
+        detailSongs?.let { songsInDetail ->
+            sortSongsForDetail(
+                songs = songsInDetail,
+                mode = sortMode,
+                descending = sortDescending
+            )
+        }
+    }
+
     val playlistDetailSongs = remember(
         songs,
         currentSelectedPlaylist
@@ -126,6 +152,20 @@ fun LibraryScreen(
             playlist.songIds.mapNotNull { songId ->
                 songsById[songId]
             }
+        }
+    }
+
+    val sortedPlaylistDetailSongs = remember(
+        playlistDetailSongs,
+        sortMode,
+        sortDescending
+    ) {
+        playlistDetailSongs?.let { songsInPlaylist ->
+            sortSongsForDetail(
+                songs = songsInPlaylist,
+                mode = sortMode,
+                descending = sortDescending
+            )
         }
     }
 
@@ -147,10 +187,10 @@ fun LibraryScreen(
         onPlaybackContextChanged(
             when {
                 currentSelectedPlaylist != null ->
-                    playlistDetailSongs ?: emptyList()
+                    sortedPlaylistDetailSongs ?: emptyList()
 
                 selectedGroup != null ->
-                    detailSongs ?: emptyList()
+                    sortedDetailSongs ?: emptyList()
 
                 activeTab == "SONGS" -> filteredSongs
                 activeTab == "FAVORITES" -> filteredSongs
@@ -179,7 +219,7 @@ fun LibraryScreen(
     ) {
         if (currentSelectedPlaylist != null) {
             val playlist = currentSelectedPlaylist
-            val songsInPlaylist = playlistDetailSongs ?: emptyList()
+            val songsInPlaylist = sortedPlaylistDetailSongs ?: emptyList()
 
             Row(
                 modifier = Modifier
@@ -193,6 +233,7 @@ fun LibraryScreen(
                 IconButton(
                     onClick = {
                         selectedPlaylist = null
+                        onPlaybackContextChanged(null)
                     }
                 ) {
                     Icon(
@@ -248,7 +289,7 @@ fun LibraryScreen(
             }
         } else if (selectedGroup != null) {
             val group = selectedGroup!!
-            val songsInGroup = detailSongs ?: emptyList()
+            val songsInGroup = sortedDetailSongs ?: emptyList()
 
             /*
              * DETALLE DEL GRUPO
@@ -269,6 +310,7 @@ fun LibraryScreen(
                 IconButton(
                     onClick = {
                         selectedGroup = null
+                        onPlaybackContextChanged(null)
                     }
                 ) {
                     Icon(
@@ -457,28 +499,36 @@ fun LibraryScreen(
                 "ALBUMS" -> {
                     AlbumLibraryView(
                         songs = filteredSongs,
-                        onGroupSelected = { selectedGroup = it }
+                        onGroupSelected = {
+                            selectedGroup = it
+                        }
                     )
                 }
 
                 "ARTISTS" -> {
                     ArtistLibraryView(
                         songs = filteredSongs,
-                        onGroupSelected = { selectedGroup = it }
+                        onGroupSelected = {
+                            selectedGroup = it
+                        }
                     )
                 }
 
                 "GENRES" -> {
                     GenreLibraryView(
                         songs = filteredSongs,
-                        onGroupSelected = { selectedGroup = it }
+                        onGroupSelected = {
+                            selectedGroup = it
+                        }
                     )
                 }
 
                 "FOLDERS" -> {
                     FolderLibraryView(
                         songs = filteredSongs,
-                        onGroupSelected = { selectedGroup = it }
+                        onGroupSelected = {
+                            selectedGroup = it
+                        }
                     )
                 }
 
@@ -863,6 +913,47 @@ private fun folderName(path: String): String {
 
     return parent.substring(parentSlash + 1)
         .ifBlank { "Almacenamiento" }
+}
+
+private fun sortSongsForDetail(
+    songs: List<Song>,
+    mode: MusicViewModel.SortMode,
+    descending: Boolean
+): List<Song> {
+    val sorted = when (mode) {
+        MusicViewModel.SortMode.TITLE ->
+            songs.sortedBy { it.title.trim().lowercase() }
+
+        MusicViewModel.SortMode.ARTIST ->
+            songs.sortedBy { it.artist.trim().lowercase() }
+
+        MusicViewModel.SortMode.ALBUM ->
+            songs.sortedBy { it.album.trim().lowercase() }
+
+        MusicViewModel.SortMode.GENRE ->
+            songs.sortedBy { it.genre.orEmpty().trim().lowercase() }
+
+        MusicViewModel.SortMode.DATE ->
+            songs.sortedBy { it.dateModified }
+
+        MusicViewModel.SortMode.DURATION ->
+            songs.sortedBy { it.durationMs }
+
+        MusicViewModel.SortMode.FILE_SIZE ->
+            songs.sortedBy { it.fileSize }
+
+        MusicViewModel.SortMode.FILE_NAME ->
+            songs.sortedBy {
+                it.filePath.substringAfterLast('/').trim().lowercase()
+            }
+
+        MusicViewModel.SortMode.FOLDER ->
+            songs.sortedBy {
+                folderName(it.filePath).trim().lowercase()
+            }
+    }
+
+    return if (descending) sorted.asReversed() else sorted
 }
 
 private data class LibraryGroup(

@@ -308,6 +308,7 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                             viewModel.shuffleContext(context)
                         }
                     },
+                    sortEnabled = libraryPlaybackContext != null,
 
                     sortMode = sortMode,
                     sortDescending = sortDescending,
@@ -352,6 +353,8 @@ LibraryScreen(
                         isPlaying = isPlaying,
                         searchQuery = searchQuery,
                         activeTab = activeTab,
+                        sortMode = sortMode,
+                        sortDescending = sortDescending,
                         onSongSelect = { song ->
                             val context = libraryPlaybackContext
 

@@ -35,6 +35,7 @@ fun HeaderBar(
     onOpenControlCenter: () -> Unit,
     shuffleEnabled: Boolean,
     onShuffleAll: () -> Unit,
+    sortEnabled: Boolean,
     sortMode: MusicViewModel.SortMode,
     sortDescending: Boolean,
     onSortSelected: (MusicViewModel.SortMode, Boolean) -> Unit
@@ -372,13 +373,25 @@ fun HeaderBar(
               }
 
               Box {
+                  val sortColor =
+                      if (sortEnabled) {
+                          OrangePrimary
+                      } else {
+                          TextSecondary.copy(alpha = 0.38f)
+                      }
+
                   TextButton(
                       onClick = {
-                          showSortMenu = true
+                          if (sortEnabled) {
+                              showSortMenu = true
+                          }
                       },
+                      enabled = sortEnabled,
                       colors = ButtonDefaults.textButtonColors(
-                          contentColor = TextSecondary,
-                          containerColor = DarkCard
+                          contentColor = OrangePrimary,
+                          disabledContentColor = TextSecondary.copy(alpha = 0.38f),
+                          containerColor = DarkCard,
+                          disabledContainerColor = DarkCard
                       ),
                       shape = RoundedCornerShape(18.dp),
                       contentPadding = PaddingValues(
@@ -389,7 +402,7 @@ fun HeaderBar(
                       Icon(
                           imageVector = Icons.Default.Sort,
                           contentDescription = "Ordenar",
-                          tint = TextSecondary,
+                          tint = sortColor,
                           modifier = Modifier.size(18.dp)
                       )
 
@@ -397,7 +410,7 @@ fun HeaderBar(
 
                       Text(
                           text = "Ordenar",
-                          color = TextSecondary,
+                          color = sortColor,
                           fontSize = 13.sp,
                           fontWeight = FontWeight.SemiBold
                       )
