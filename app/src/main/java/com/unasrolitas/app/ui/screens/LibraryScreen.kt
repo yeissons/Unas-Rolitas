@@ -940,7 +940,7 @@ private fun sortSongsForDetail(
             songs.sortedBy { it.durationMs }
 
         MusicViewModel.SortMode.FILE_SIZE ->
-            songs.sortedBy { it.fileSize }
+            songs.sortedBy { it.sizeBytes }
 
         MusicViewModel.SortMode.FILE_NAME ->
             songs.sortedBy {
