@@ -237,6 +237,8 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
         }
     }
 
+    var playlistForExport by remember { mutableStateOf<Playlist?>(null) }
+
     val exportPlaylistLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("audio/x-mpegurl")
     ) { uri ->
@@ -309,7 +311,6 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
     var playlistForDeleteDialog by remember { mutableStateOf<Playlist?>(null) }
     var selectedPlaylistForMenu by remember { mutableStateOf<Playlist?>(null) }
     var playlistForAddSongs by remember { mutableStateOf<Playlist?>(null) }
-    var playlistForExport by remember { mutableStateOf<Playlist?>(null) }
 
 
     /*
