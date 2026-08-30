@@ -47,7 +47,7 @@ fun LibraryScreen(
     sortDescending: Boolean,
     onSongSelect: (Song) -> Unit,
     onFavoriteToggle: (Song) -> Unit,
-    onSongMenuClick: (Song) -> Unit,
+    onSongMenuClick: (Song, Playlist?) -> Unit,
     onRemoveSongFromPlaylist: ((Playlist, Song) -> Unit)? = null,
     onDeletePlaylist: ((Playlist) -> Unit)? = null,
     onRenamePlaylist: ((Playlist) -> Unit)? = null,
@@ -276,7 +276,9 @@ fun LibraryScreen(
                     isPlaying = isPlaying,
                     onSongSelect = onSongSelect,
                     onFavoriteToggle = onFavoriteToggle,
-                    onSongMenuClick = onSongMenuClick,
+                    onSongMenuClick = { song ->
+                        onSongMenuClick(song, playlist)
+                    },
                     onRemoveSong = if (onRemoveSongFromPlaylist != null) {
                         { song ->
                             onRemoveSongFromPlaylist(playlist, song)
@@ -361,7 +363,9 @@ fun LibraryScreen(
                         onSongSelect(song)
                     },
                     onFavoriteToggle = onFavoriteToggle,
-                    onSongMenuClick = onSongMenuClick,
+                    onSongMenuClick = { song ->
+                        onSongMenuClick(song, null)
+                    },
                     showHeader = true
                 )
             }
@@ -539,7 +543,7 @@ fun LibraryScreen(
                         isPlaying = isPlaying,
                         onSongSelect = onSongSelect,
                         onFavoriteToggle = onFavoriteToggle,
-                        onSongMenuClick = onSongMenuClick
+                        onSongMenuClick = { song -> onSongMenuClick(song, null) }
                     )
                 }
 
@@ -557,7 +561,7 @@ fun LibraryScreen(
                             isPlaying = isPlaying,
                             onSongSelect = onSongSelect,
                             onFavoriteToggle = onFavoriteToggle,
-                            onSongMenuClick = onSongMenuClick
+                            onSongMenuClick = { song -> onSongMenuClick(song, null) }
                         )
                     }
                 }
@@ -576,7 +580,7 @@ fun LibraryScreen(
                             isPlaying = isPlaying,
                             onSongSelect = onSongSelect,
                             onFavoriteToggle = onFavoriteToggle,
-                            onSongMenuClick = onSongMenuClick,
+                            onSongMenuClick = { song -> onSongMenuClick(song, null) },
                             showHeader = true
                         )
                     }

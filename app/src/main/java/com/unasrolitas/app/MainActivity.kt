@@ -276,6 +276,7 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var playlistForRenameDialog by remember { mutableStateOf<Playlist?>(null) }
     var playlistForDeleteDialog by remember { mutableStateOf<Playlist?>(null) }
+    var selectedPlaylistForMenu by remember { mutableStateOf<Playlist?>(null) }
 
 
     /*
@@ -371,8 +372,9 @@ LibraryScreen(
                         onFavoriteToggle = { song ->
                             viewModel.toggleFavorite(song)
                         },
-                        onSongMenuClick = { song ->
+                        onSongMenuClick = { song, playlist ->
                             viewModel.setSelectedSongForMenu(song)
+                            selectedPlaylistForMenu = playlist
                         },
                         onRemoveSongFromPlaylist = { playlist, song ->
                             viewModel.removeSongFromPlaylist(
@@ -485,10 +487,21 @@ LibraryScreen(
             if (selectedSongForMenu != null) {
                 ContextMenuBottomSheet(
                     song = selectedSongForMenu,
-                    onDismiss = { viewModel.setSelectedSongForMenu(null) },
+                    onDismiss = {
+                        viewModel.setSelectedSongForMenu(null)
+                        selectedPlaylistForMenu = null
+                    },
                     onPlayNow = { song -> viewModel.playSong(song) },
                     onPlayNext = { song -> viewModel.playNextSong(song) },
                     onAddToQueue = { song -> viewModel.addSongToQueue(song) },
+                    onRemoveFromPlaylist = selectedPlaylistForMenu?.let { playlist ->
+                        { song ->
+                            viewModel.removeSongFromPlaylist(
+                                playlist.id,
+                                song
+                            )
+                        }
+                    },
                     onAddToPlaylist = { song ->
                         songForPlaylistDialog = song
                     },

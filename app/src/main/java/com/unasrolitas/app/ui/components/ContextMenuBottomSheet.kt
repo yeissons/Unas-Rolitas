@@ -25,6 +25,7 @@ fun ContextMenuBottomSheet(
     onPlayNow: (Song) -> Unit,
     onPlayNext: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
+    onRemoveFromPlaylist: ((Song) -> Unit)? = null,
     onAddToPlaylist: (Song) -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onShowInfo: (Song) -> Unit
@@ -94,6 +95,18 @@ fun ContextMenuBottomSheet(
                     onDismiss()
                 }
             )
+
+            if (onRemoveFromPlaylist != null) {
+                ContextOptionRow(
+                    icon = Icons.Default.Delete,
+                    title = "Quitar de esta playlist",
+                    color = TextMuted,
+                    onClick = {
+                        onRemoveFromPlaylist(song)
+                        onDismiss()
+                    }
+                )
+            }
 
             ContextOptionRow(
                 icon = Icons.Default.LibraryMusic,
