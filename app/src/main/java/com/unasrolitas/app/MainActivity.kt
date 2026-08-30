@@ -347,7 +347,11 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                 composable(NavRoutes.Library.route) {
 
 LibraryScreen(
-                        songs = viewModel.songsForTab(activeTab),
+                        songs = if (activeTab == "PLAYLISTS") {
+                              songs
+                          } else {
+                              viewModel.songsForTab(activeTab)
+                          },
                         playlists = playlists,
                         currentSong = currentSong,
                         isPlaying = isPlaying,

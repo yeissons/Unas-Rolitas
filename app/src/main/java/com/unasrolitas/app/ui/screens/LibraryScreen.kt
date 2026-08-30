@@ -1039,10 +1039,12 @@ fun PlaylistCardItem(
     onRename: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
-    val coverSong = playlist.songIds
+    val coverSongs = playlist.songIds
         .asSequence()
         .mapNotNull { id -> songs.find { it.id == id } }
-        .firstOrNull()
+        .filter { it.artworkUri != null }
+        .take(4)
+        .toList()
 
     Surface(
         color = DarkCard,
@@ -1062,13 +1064,57 @@ fun PlaylistCardItem(
                     .background(DarkSurface),
                 contentAlignment = Alignment.Center
             ) {
-                if (playlist.coverUri != null || coverSong?.artworkUri != null) {
+                if (playlist.coverUri != null) {
                     AsyncImage(
-                        model = playlist.coverUri ?: coverSong?.artworkUri,
+                        model = playlist.coverUri,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
+                } else if (coverSongs.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) {
+                            PlaylistCoverTile(
+                                song = coverSongs.getOrNull(0),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+
+                            PlaylistCoverTile(
+                                song = coverSongs.getOrNull(1),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) {
+                            PlaylistCoverTile(
+                                song = coverSongs.getOrNull(2),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+
+                            PlaylistCoverTile(
+                                song = coverSongs.getOrNull(3),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+                        }
+                    }
                 } else {
                     Icon(
                         imageVector = Icons.Default.QueueMusic,
@@ -1156,6 +1202,27 @@ fun PlaylistCardItem(
                 text = "${playlist.songIds.size} rolitas",
                 fontSize = 12.sp,
                 color = TextSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaylistCoverTile(
+    song: Song?,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(DarkSurface),
+        contentAlignment = Alignment.Center
+    ) {
+        if (song?.artworkUri != null) {
+            AsyncImage(
+                model = song.artworkUri,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
         }
     }
