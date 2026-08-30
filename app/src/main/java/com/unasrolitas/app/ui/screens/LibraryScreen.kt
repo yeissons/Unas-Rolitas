@@ -51,6 +51,8 @@ fun LibraryScreen(
     onRemoveSongFromPlaylist: ((Playlist, Song) -> Unit)? = null,
     onDeletePlaylist: ((Playlist) -> Unit)? = null,
     onRenamePlaylist: ((Playlist) -> Unit)? = null,
+    onAddSongsToPlaylist: ((Playlist) -> Unit)? = null,
+    onExportPlaylist: ((Playlist) -> Unit)? = null,
     onCreatePlaylist: () -> Unit,
     onImportPlaylist: () -> Unit = {},
     onPlaybackContextChanged: (List<Song>?) -> Unit
@@ -472,6 +474,26 @@ fun LibraryScreen(
                                         songs = songs,
                                         onClick = {
                                             selectedPlaylist = playlist
+                                        },
+                                        onAddSongs = if (
+                                            !playlist.isSystemPlaylist &&
+                                            onAddSongsToPlaylist != null
+                                        ) {
+                                            {
+                                                onAddSongsToPlaylist(playlist)
+                                            }
+                                        } else {
+                                            null
+                                        },
+                                        onExport = if (
+                                            !playlist.isSystemPlaylist &&
+                                            onExportPlaylist != null
+                                        ) {
+                                            {
+                                                onExportPlaylist(playlist)
+                                            }
+                                        } else {
+                                            null
                                         },
                                         onRename = if (
                                             !playlist.isSystemPlaylist &&
@@ -1040,6 +1062,8 @@ fun PlaylistCardItem(
     playlist: Playlist,
     songs: List<Song>,
     onClick: () -> Unit,
+    onAddSongs: (() -> Unit)? = null,
+    onExport: (() -> Unit)? = null,
     onRename: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
@@ -1128,7 +1152,12 @@ fun PlaylistCardItem(
                     )
                 }
 
-                if (onRename != null || onDelete != null) {
+                if (
+                    onAddSongs != null ||
+                    onExport != null ||
+                    onRename != null ||
+                    onDelete != null
+                ) {
                     var menuExpanded by remember { mutableStateOf(false) }
 
                     Box(
@@ -1152,6 +1181,42 @@ fun PlaylistCardItem(
                                 menuExpanded = false
                             }
                         ) {
+                            if (onAddSongs != null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("Añadir canciones")
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onAddSongs()
+                                    }
+                                )
+                            }
+
+                            if (onExport != null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("Exportar playlist")
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.FileUpload,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onExport()
+                                    }
+                                )
+                            }
+
                             if (onRename != null) {
                                 DropdownMenuItem(
                                     text = {

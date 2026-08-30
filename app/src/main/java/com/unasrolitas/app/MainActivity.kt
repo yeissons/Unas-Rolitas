@@ -14,6 +14,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.media3.session.MediaController
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
@@ -233,6 +237,33 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
         }
     }
 
+    val exportPlaylistLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("audio/x-mpegurl")
+    ) { uri ->
+        val playlist = playlistForExport
+
+        if (uri != null && playlist != null) {
+            val success = viewModel.exportPlaylistToUri(
+                playlistId = playlist.id,
+                uri = uri
+            )
+
+            if (success) {
+                AppLogger.i(
+                    "PLAYLIST",
+                    "Playlist exportada: ${playlist.name}"
+                )
+            } else {
+                AppLogger.e(
+                    "PLAYLIST",
+                    "No se pudo exportar la playlist: ${playlist.name}"
+                )
+            }
+        }
+
+        playlistForExport = null
+    }
+
     val exportLogLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/plain")
     ) { uri ->
@@ -277,6 +308,8 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
     var playlistForRenameDialog by remember { mutableStateOf<Playlist?>(null) }
     var playlistForDeleteDialog by remember { mutableStateOf<Playlist?>(null) }
     var selectedPlaylistForMenu by remember { mutableStateOf<Playlist?>(null) }
+    var playlistForAddSongs by remember { mutableStateOf<Playlist?>(null) }
+    var playlistForExport by remember { mutableStateOf<Playlist?>(null) }
 
 
     /*
@@ -387,6 +420,15 @@ LibraryScreen(
                         },
                         onRenamePlaylist = { playlist ->
                             playlistForRenameDialog = playlist
+                        },
+                        onAddSongsToPlaylist = { playlist ->
+                            playlistForAddSongs = playlist
+                        },
+                        onExportPlaylist = { playlist ->
+                            playlistForExport = playlist
+                            exportPlaylistLauncher.launch(
+                                "${playlist.name}.m3u8"
+                            )
                         },
                         onCreatePlaylist = {
                             showCreatePlaylistDialog = true
@@ -508,6 +550,205 @@ LibraryScreen(
 
                     onToggleFavorite = { song -> viewModel.toggleFavorite(song) },
                     onShowInfo = { song -> songForInfoDialog = song }
+                )
+            }
+
+            // Añadir varias canciones a una playlist
+            if (playlistForAddSongs != null) {
+                val playlist = playlistForAddSongs!!
+
+                var addSongsQuery by remember(playlist) {
+                    mutableStateOf("")
+                }
+
+                var selectedSongIds by remember(playlist) {
+                    mutableStateOf(emptySet<Long>())
+                }
+
+                val playlistSongIds = playlist.songIds.toSet()
+
+                val availableSongs = remember(
+                    songs,
+                    addSongsQuery,
+                    playlistSongIds
+                ) {
+                    songs.filter { song ->
+                        song.id !in playlistSongIds &&
+                            (
+                                addSongsQuery.isBlank() ||
+                                    song.title.contains(
+                                        addSongsQuery,
+                                        ignoreCase = true
+                                    ) ||
+                                    song.artist.contains(
+                                        addSongsQuery,
+                                        ignoreCase = true
+                                    ) ||
+                                    song.album.contains(
+                                        addSongsQuery,
+                                        ignoreCase = true
+                                    )
+                            )
+                    }
+                }
+
+                AlertDialog(
+                    onDismissRequest = {
+                        playlistForAddSongs = null
+                    },
+                    containerColor = DarkCard,
+                    title = {
+                        Text(
+                            text = "Añadir canciones",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = playlist.name,
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(10.dp)
+                            )
+
+                            OutlinedTextField(
+                                value = addSongsQuery,
+                                onValueChange = {
+                                    addSongsQuery = it
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = {
+                                    Text("Buscar")
+                                }
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(8.dp)
+                            )
+
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 320.dp)
+                            ) {
+                                items(
+                                    items = availableSongs,
+                                    key = { it.id }
+                                ) { song ->
+                                    val selected =
+                                        song.id in selectedSongIds
+
+                                    ListItem(
+                                        headlineContent = {
+                                            Text(
+                                                text = song.title,
+                                                color = Color.White,
+                                                maxLines = 1
+                                            )
+                                        },
+                                        supportingContent = {
+                                            Text(
+                                                text = song.artist,
+                                                color = TextSecondary,
+                                                maxLines = 1
+                                            )
+                                        },
+                                        leadingContent = {
+                                            Checkbox(
+                                                checked = selected,
+                                                onCheckedChange = {
+                                                    selectedSongIds =
+                                                        if (it) {
+                                                            selectedSongIds +
+                                                                song.id
+                                                        } else {
+                                                            selectedSongIds -
+                                                                song.id
+                                                        }
+                                                }
+                                            )
+                                        },
+                                        modifier = Modifier.clickable {
+                                            selectedSongIds =
+                                                if (selected) {
+                                                    selectedSongIds -
+                                                        song.id
+                                                } else {
+                                                    selectedSongIds +
+                                                        song.id
+                                                }
+                                        },
+                                        colors = ListItemDefaults.colors(
+                                            containerColor =
+                                                Color.Transparent
+                                        )
+                                    )
+                                }
+                            }
+
+                            if (availableSongs.isEmpty()) {
+                                Spacer(
+                                    modifier = Modifier.height(12.dp)
+                                )
+
+                                Text(
+                                    text = if (songs.isEmpty()) {
+                                        "No hay canciones en la biblioteca."
+                                    } else {
+                                        "No hay canciones disponibles para añadir."
+                                    },
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            enabled = selectedSongIds.isNotEmpty(),
+                            onClick = {
+                                selectedSongIds.forEach { songId ->
+                                    songs.firstOrNull {
+                                        it.id == songId
+                                    }?.let { song ->
+                                        viewModel.addSongToPlaylist(
+                                            playlist.id,
+                                            song
+                                        )
+                                    }
+                                }
+
+                                playlistForAddSongs = null
+                            }
+                        ) {
+                            Text(
+                                text =
+                                    "Añadir (${selectedSongIds.size})",
+                                color = OrangePrimary
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                playlistForAddSongs = null
+                            }
+                        ) {
+                            Text(
+                                text = "Cancelar",
+                                color = TextSecondary
+                            )
+                        }
+                    }
                 )
             }
 

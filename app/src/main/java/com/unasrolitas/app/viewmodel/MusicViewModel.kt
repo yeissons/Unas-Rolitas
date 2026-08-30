@@ -751,6 +751,21 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         return playlist
     }
 
+    fun exportPlaylistToUri(
+        playlistId: String,
+        uri: android.net.Uri
+    ): Boolean {
+        val playlist = _playlists.value.firstOrNull {
+            it.id == playlistId
+        } ?: return false
+
+        return playlistFileRepository.writeM3u8(
+            uri = uri,
+            playlist = playlist,
+            songs = _allSongs.value
+        )
+    }
+
     fun createPlaylist(name: String): Playlist? {
         val playlist = prefsRepository.createPlaylist(name) ?: return null
         _playlists.value = _playlists.value + playlist

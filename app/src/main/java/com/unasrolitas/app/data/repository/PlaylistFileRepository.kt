@@ -60,6 +60,47 @@ class PlaylistFileRepository(private val context: Context) {
         )
     }
 
+    fun writeM3u8(
+        uri: Uri,
+        playlist: Playlist,
+        songs: List<Song>
+    ): Boolean {
+        return try {
+            val songsById = songs.associateBy { it.id }
+
+            val content = buildString {
+                append("#EXTM3U\n")
+
+                playlist.songIds.forEach { songId ->
+                    val song = songsById[songId] ?: return@forEach
+
+                    append("#EXTINF:-1,")
+
+                    if (song.artist.isNotBlank()) {
+                        append(song.artist.trim())
+                        append(" - ")
+                    }
+
+                    append(song.title.trim())
+                    append("\n")
+
+                    append(song.filePath)
+                    append("\n")
+                }
+            }
+
+            resolver.openOutputStream(uri)?.use { output ->
+                output.write(
+                    content.toByteArray(StandardCharsets.UTF_8)
+                )
+            } ?: return false
+
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     private fun detectFormat(uri: Uri): String? {
         val value = uri.toString()
             .substringBefore('?')
