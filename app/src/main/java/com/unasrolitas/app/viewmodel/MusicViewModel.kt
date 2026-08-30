@@ -736,19 +736,34 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun importPlaylist(uri: android.net.Uri): Playlist? {
-        val playlist = playlistFileRepository.readPlaylist(
+        val playlists = importPlaylists(uri)
+
+        return playlists.firstOrNull()
+    }
+
+    fun importPlaylists(uri: android.net.Uri): List<Playlist> {
+        val importedPlaylists = playlistFileRepository.readPlaylists(
             uri = uri,
             songs = _allSongs.value
-        ) ?: return null
+        )
 
-        val updated = _playlists.value
-            .filterNot { it.id == playlist.id } + playlist
+        if (importedPlaylists.isEmpty()) return emptyList()
+
+        val currentPlaylists = _playlists.value
+
+        val importedIds = importedPlaylists
+            .map { it.id }
+            .toSet()
+
+        val updated = currentPlaylists
+            .filterNot { it.id in importedIds } +
+            importedPlaylists
 
         _playlists.value = updated
 
         prefsRepository.saveUserPlaylists(updated)
 
-        return playlist
+        return importedPlaylists
     }
 
     fun exportPlaylistToUri(
@@ -762,6 +777,23 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         return playlistFileRepository.writeM3u8(
             uri = uri,
             playlist = playlist,
+            songs = _allSongs.value
+        )
+    }
+
+    fun exportPlaylistsToUri(
+        playlistIds: List<String>,
+        uri: android.net.Uri
+    ): Boolean {
+        val selectedPlaylists = playlistIds.mapNotNull { id ->
+            _playlists.value.firstOrNull { it.id == id }
+        }.filterNot { it.isSystemPlaylist }
+
+        if (selectedPlaylists.isEmpty()) return false
+
+        return playlistFileRepository.writePlaylistsZip(
+            uri = uri,
+            playlists = selectedPlaylists,
             songs = _allSongs.value
         )
     }

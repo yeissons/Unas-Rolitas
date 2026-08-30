@@ -53,6 +53,7 @@ fun LibraryScreen(
     onRenamePlaylist: ((Playlist) -> Unit)? = null,
     onAddSongsToPlaylist: ((Playlist) -> Unit)? = null,
     onExportPlaylist: ((Playlist) -> Unit)? = null,
+    onExportPlaylists: (List<Playlist>) -> Unit = {},
     onCreatePlaylist: () -> Unit,
     onImportPlaylist: () -> Unit = {},
     onPlaybackContextChanged: (List<Song>?) -> Unit
@@ -378,6 +379,14 @@ fun LibraryScreen(
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
+                        var showPlaylistTransferMenu by remember {
+                            mutableStateOf(false)
+                        }
+
+                        var showPlaylistExportDialog by remember {
+                            mutableStateOf(false)
+                        }
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -387,27 +396,72 @@ fun LibraryScreen(
                                     top = 12.dp,
                                     bottom = 8.dp
                                 ),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
+                            Box(
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text(
-                                    text = "Listas de reproducción",
-                                    color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    text = if (playlists.isEmpty()) {
-                                        "Todavía no tienes listas"
-                                    } else {
-                                        "${playlists.size} listas"
+                                OutlinedButton(
+                                    onClick = {
+                                        showPlaylistTransferMenu = true
                                     },
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ImportExport,
+                                        contentDescription = null
+                                    )
+
+                                    Spacer(
+                                        modifier = Modifier.width(6.dp)
+                                    )
+
+                                    Text("Importar / Exportar")
+                                }
+
+                                DropdownMenu(
+                                    expanded = showPlaylistTransferMenu,
+                                    onDismissRequest = {
+                                        showPlaylistTransferMenu = false
+                                    }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text("Importar listas")
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.FileOpen,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        onClick = {
+                                            showPlaylistTransferMenu = false
+                                            onImportPlaylist()
+                                        }
+                                    )
+
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text("Exportar listas")
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.FileDownload,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        enabled = playlists.any {
+                                            !it.isSystemPlaylist
+                                        },
+                                        onClick = {
+                                            showPlaylistTransferMenu = false
+                                            showPlaylistExportDialog = true
+                                        }
+                                    )
+                                }
                             }
 
                             FilledTonalButton(
@@ -419,24 +473,139 @@ fun LibraryScreen(
                                     contentDescription = null
                                 )
 
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(
+                                    modifier = Modifier.width(6.dp)
+                                )
 
                                 Text("Crear")
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        if (showPlaylistExportDialog) {
+                            val exportablePlaylists = playlists.filter {
+                                !it.isSystemPlaylist
+                            }
 
-                        OutlinedButton(
-                            onClick = onImportPlaylist,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.FileOpen,
-                                contentDescription = null
+                            var selectedPlaylistIds by remember(
+                                exportablePlaylists
+                            ) {
+                                mutableStateOf(
+                                    exportablePlaylists
+                                        .map { it.id }
+                                        .toSet()
+                                )
+                            }
+
+                            AlertDialog(
+                                onDismissRequest = {
+                                    showPlaylistExportDialog = false
+                                },
+                                title = {
+                                    Text("Exportar listas")
+                                },
+                                text = {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(max = 420.dp)
+                                    ) {
+                                        Text(
+                                            text = "Selecciona las listas que quieres incluir en el archivo ZIP.",
+                                            color = TextSecondary
+                                        )
+
+                                        Spacer(
+                                            modifier = Modifier.height(12.dp)
+                                        )
+
+                                        LazyColumn {
+                                            items(exportablePlaylists) { playlist ->
+                                                val selected =
+                                                    playlist.id in selectedPlaylistIds
+
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            selectedPlaylistIds =
+                                                                if (selected) {
+                                                                    selectedPlaylistIds -
+                                                                        playlist.id
+                                                                } else {
+                                                                    selectedPlaylistIds +
+                                                                        playlist.id
+                                                                }
+                                                        }
+                                                        .padding(vertical = 4.dp),
+                                                    verticalAlignment =
+                                                        Alignment.CenterVertically
+                                                ) {
+                                                    Checkbox(
+                                                        checked = selected,
+                                                        onCheckedChange = { checked ->
+                                                            selectedPlaylistIds =
+                                                                if (checked) {
+                                                                    selectedPlaylistIds +
+                                                                        playlist.id
+                                                                } else {
+                                                                    selectedPlaylistIds -
+                                                                        playlist.id
+                                                                }
+                                                        }
+                                                    )
+
+                                                    Spacer(
+                                                        modifier = Modifier.width(8.dp)
+                                                    )
+
+                                                    Column {
+                                                        Text(
+                                                            text = playlist.name,
+                                                            fontWeight =
+                                                                FontWeight.Medium
+                                                        )
+
+                                                        Text(
+                                                            text =
+                                                                "${playlist.songIds.size} rolitas",
+                                                            color = TextSecondary,
+                                                            fontSize = 12.sp
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            val selected =
+                                                exportablePlaylists.filter {
+                                                    it.id in selectedPlaylistIds
+                                                }
+
+                                            if (selected.isNotEmpty()) {
+                                                showPlaylistExportDialog = false
+                                                onExportPlaylists(selected)
+                                            }
+                                        },
+                                        enabled =
+                                            selectedPlaylistIds.isNotEmpty()
+                                    ) {
+                                        Text("Continuar")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(
+                                        onClick = {
+                                            showPlaylistExportDialog = false
+                                        }
+                                    ) {
+                                        Text("Cancelar")
+                                    }
+                                }
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Importar playlist")
                         }
 
                         if (playlists.isEmpty()) {

@@ -7,6 +7,9 @@ import com.unasrolitas.app.data.model.Song
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipInputStream
 
 class PlaylistFileRepository(private val context: Context) {
 
@@ -17,6 +20,10 @@ class PlaylistFileRepository(private val context: Context) {
         songs: List<Song>
     ): Playlist? {
         val format = detectFormat(uri) ?: return null
+
+        if (format == "zip") {
+            return readZipFirstPlaylist(uri, songs)
+        }
 
         val content = try {
             resolver.openInputStream(uri)?.use { input ->
@@ -101,17 +108,263 @@ class PlaylistFileRepository(private val context: Context) {
         }
     }
 
+    fun writePlaylistsZip(
+        uri: Uri,
+        playlists: List<Playlist>,
+        songs: List<Song>
+    ): Boolean {
+        if (playlists.isEmpty()) return false
+
+        return try {
+            val usedNames = mutableSetOf<String>()
+
+            resolver.openOutputStream(uri)?.use { output ->
+                ZipOutputStream(output).use { zip ->
+                    playlists.forEach { playlist ->
+                        val baseName = sanitizeZipEntryName(playlist.name)
+
+                        var entryName = "$baseName.m3u8"
+                        var suffix = 2
+
+                        while (!usedNames.add(entryName.lowercase())) {
+                            entryName = "$baseName ($suffix).m3u8"
+                            suffix++
+                        }
+
+                        zip.putNextEntry(ZipEntry(entryName))
+
+                        zip.write(
+                            buildM3u8Content(
+                                playlist = playlist,
+                                songs = songs
+                            ).toByteArray(StandardCharsets.UTF_8)
+                        )
+
+                        zip.closeEntry()
+                    }
+                }
+            } ?: return false
+
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun buildM3u8Content(
+        playlist: Playlist,
+        songs: List<Song>
+    ): String {
+        val songsById = songs.associateBy { it.id }
+
+        return buildString {
+            append("#EXTM3U\n")
+
+            playlist.songIds.forEach { songId ->
+                val song = songsById[songId] ?: return@forEach
+
+                append("#EXTINF:-1,")
+
+                if (song.artist.isNotBlank()) {
+                    append(song.artist.trim())
+                    append(" - ")
+                }
+
+                append(song.title.trim())
+                append("\n")
+
+                append(song.filePath)
+                append("\n")
+            }
+        }
+    }
+
+    private fun sanitizeZipEntryName(name: String): String {
+        return name
+            .trim()
+            .replace(Regex("""[\\/:*?"<>|]"""), "_")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+            .take(100)
+            .ifBlank { "Playlist" }
+    }
+
+    fun readPlaylists(
+        uri: Uri,
+        songs: List<Song>
+    ): List<Playlist> {
+        val format = detectFormat(uri) ?: return emptyList()
+
+        if (format != "zip") {
+            return listOfNotNull(readPlaylist(uri, songs))
+        }
+
+        return readZipPlaylists(uri, songs)
+    }
+
+    private fun readZipFirstPlaylist(
+        uri: Uri,
+        songs: List<Song>
+    ): Playlist? {
+        return readZipPlaylists(uri, songs).firstOrNull()
+    }
+
+    private fun readZipPlaylists(
+        uri: Uri,
+        songs: List<Song>
+    ): List<Playlist> {
+        val result = mutableListOf<Playlist>()
+
+        try {
+            resolver.openInputStream(uri)?.use { input ->
+                ZipInputStream(input).use { zip ->
+                    var entry = zip.nextEntry
+
+                    while (entry != null) {
+                        if (!entry.isDirectory) {
+                            val entryName = entry.name
+                            val lowerName = entryName.lowercase()
+
+                            if (
+                                lowerName.endsWith(".m3u") ||
+                                lowerName.endsWith(".m3u8") ||
+                                lowerName.endsWith(".pls") ||
+                                lowerName.endsWith(".wpl")
+                            ) {
+                                val contentBytes = zip.readBytes()
+                                val content = String(
+                                    contentBytes,
+                                    StandardCharsets.UTF_8
+                                )
+
+                                val entries = when {
+                                    lowerName.endsWith(".m3u") ||
+                                    lowerName.endsWith(".m3u8") ->
+                                        parseM3u(content)
+
+                                    lowerName.endsWith(".pls") ->
+                                        parsePls(content)
+
+                                    lowerName.endsWith(".wpl") ->
+                                        parseWpl(content)
+
+                                    else ->
+                                        emptyList()
+                                }
+
+                                val matchedSongIds = entries
+                                    .mapNotNull { playlistEntry ->
+                                        resolveSong(
+                                            playlistEntry,
+                                            songs
+                                        )?.id
+                                    }
+                                    .distinct()
+
+                                if (matchedSongIds.isNotEmpty()) {
+                                    val playlistName =
+                                        entryName
+                                            .substringAfterLast('/')
+                                            .substringBeforeLast('.')
+                                            .trim()
+                                            .ifBlank {
+                                                "Playlist"
+                                            }
+
+                                    result += Playlist(
+                                        id = "zip_${uri}_${result.size}_$playlistName",
+                                        name = playlistName,
+                                        description = "Playlist importada desde ZIP",
+                                        songIds = matchedSongIds,
+                                        isSystemPlaylist = false,
+                                        isExternalFile = true,
+                                        sourceUri = uri,
+                                        sourceFormat = lowerName
+                                            .substringAfterLast('.')
+                                    )
+                                }
+                            }
+                        }
+
+                        zip.closeEntry()
+                        entry = zip.nextEntry
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            return emptyList()
+        }
+
+        return result
+    }
+
     private fun detectFormat(uri: Uri): String? {
-        val value = uri.toString()
+        val uriValue = uri.toString()
             .substringBefore('?')
             .substringBefore('#')
             .lowercase()
 
+        val displayName = try {
+            resolver.query(
+                uri,
+                arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    cursor.getString(0)
+                } else {
+                    null
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+
+        val nameValue = displayName
+            ?.substringBefore('?')
+            ?.substringBefore('#')
+            ?.lowercase()
+            .orEmpty()
+
+        val mimeType = try {
+            resolver.getType(uri)
+                ?.lowercase()
+                .orEmpty()
+        } catch (_: Exception) {
+            ""
+        }
+
         return when {
-            value.endsWith(".m3u8") -> "m3u8"
-            value.endsWith(".m3u") -> "m3u"
-            value.endsWith(".pls") -> "pls"
-            value.endsWith(".wpl") -> "wpl"
+            uriValue.endsWith(".m3u8") ||
+                nameValue.endsWith(".m3u8") ||
+                mimeType == "application/vnd.apple.mpegurl" ->
+                "m3u8"
+
+            uriValue.endsWith(".m3u") ||
+                nameValue.endsWith(".m3u") ||
+                mimeType == "audio/x-mpegurl" ||
+                mimeType == "audio/mpegurl" ->
+                "m3u"
+
+            uriValue.endsWith(".pls") ||
+                nameValue.endsWith(".pls") ||
+                mimeType == "audio/x-scpls" ||
+                mimeType == "application/pls+xml" ->
+                "pls"
+
+            uriValue.endsWith(".wpl") ||
+                nameValue.endsWith(".wpl") ||
+                mimeType == "application/vnd.ms-wpl" ->
+                "wpl"
+
+            uriValue.endsWith(".zip") ||
+                nameValue.endsWith(".zip") ||
+                mimeType == "application/zip" ||
+                mimeType == "application/x-zip-compressed" ->
+                "zip"
+
             else -> null
         }
     }

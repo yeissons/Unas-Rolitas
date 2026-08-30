@@ -221,18 +221,25 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
                 // Algunos proveedores no permiten permisos persistentes.
             }
 
-            val imported = viewModel.importPlaylist(uri)
+            val importedPlaylists = viewModel.importPlaylists(uri)
 
-            if (imported == null) {
+            if (importedPlaylists.isEmpty()) {
                 AppLogger.e(
                     "PLAYLIST_IMPORT",
-                    "No se pudo importar la playlist: $uri"
+                    "No se pudo importar ninguna playlist: $uri"
                 )
             } else {
                 AppLogger.i(
                     "PLAYLIST_IMPORT",
-                    "Playlist importada: ${imported.name} (${imported.sourceFormat})"
+                    "Playlists importadas: ${importedPlaylists.size}"
                 )
+
+                importedPlaylists.forEach { playlist ->
+                    AppLogger.i(
+                        "PLAYLIST_IMPORT",
+                        "Importada: ${playlist.name} (${playlist.sourceFormat})"
+                    )
+                }
             }
         }
     }
@@ -264,6 +271,37 @@ fun UnasRolitasMainContent(viewModel: MusicViewModel) {
         }
 
         playlistForExport = null
+    }
+
+    var playlistsForExport by remember {
+        mutableStateOf<List<Playlist>>(emptyList())
+    }
+
+    val exportPlaylistsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        val selectedPlaylists = playlistsForExport
+
+        if (uri != null && selectedPlaylists.isNotEmpty()) {
+            val success = viewModel.exportPlaylistsToUri(
+                playlistIds = selectedPlaylists.map { it.id },
+                uri = uri
+            )
+
+            if (success) {
+                AppLogger.i(
+                    "PLAYLIST",
+                    "Playlists exportadas en ZIP: ${selectedPlaylists.size}"
+                )
+            } else {
+                AppLogger.e(
+                    "PLAYLIST",
+                    "No se pudieron exportar las playlists seleccionadas"
+                )
+            }
+        }
+
+        playlistsForExport = emptyList()
     }
 
     val exportLogLauncher = rememberLauncherForActivityResult(
@@ -431,6 +469,13 @@ LibraryScreen(
                                 "${playlist.name}.m3u8"
                             )
                         },
+                        onExportPlaylists = { selectedPlaylists ->
+                            playlistsForExport = selectedPlaylists
+
+                            exportPlaylistsLauncher.launch(
+                                "unas_rolitas_playlists.zip"
+                            )
+                        },
                         onCreatePlaylist = {
                             showCreatePlaylistDialog = true
                         },
@@ -443,6 +488,7 @@ LibraryScreen(
                                     "audio/x-scpls",
                                     "application/pls+xml",
                                     "application/vnd.ms-wpl",
+                                    "application/zip",
                                     "*/*"
                                 )
                             )
